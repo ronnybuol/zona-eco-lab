@@ -155,3 +155,17 @@ test('Final visual: enam hero scene penuh, hadiah utama, CTA dan logo resmi',()=
  assert.match(css,/@media\(max-width:430px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+test('Pesan jawaban kurang tepat, donasi, dan aturan poin kumulatif sesuai versi final',()=>{
+ const html=read('public/index.html'),js=read('public/app.js'),css=read('public/style.css');
+ assert.ok(js.includes("Jawaban Anda Kurang Tepat"));
+ assert.ok(js.includes("'is-incorrect',!data.correct"));
+ assert.ok(html.includes('Donasi Untuk Zonautara.com'));
+ assert.ok(html.includes('href="https://saweria.co/zonautara"'));
+ assert.equal(html.includes('Donasi melalui Saweria'),false);
+ assert.equal(html.includes('Hanya skor terbaik profil ini'),false);
+ assert.ok(html.includes('Seluruh poin yang diperoleh pada jam resmi acara'));
+ assert.match(css,/#quiz-feedback\.is-incorrect \.quiz-feedback-title/);
+ assert.ok(html.includes('style.css?v=20261118d'));
+ assert.ok(html.includes('app.js?v=20261118d'));
+});
