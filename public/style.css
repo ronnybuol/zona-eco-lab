@@ -83,7 +83,7 @@ body.kiosk-mode.quiz-open{overflow:hidden}
 .kiosk-stage.is-active{display:flex}
 .stage-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;padding:clamp(24px,4.3vh,50px) max(19px,calc((100% - 820px)/2)) 30px}
 .stage-scroll>*,.stage-center>*{max-width:750px;margin-left:auto;margin-right:auto}
-.stage-center{display:flex;flex-direction:column;justify-content:center;align-items:stretch}
+.stage-center{display:flex;flex-direction:column;justify-content:safe center;align-items:stretch}
 .stage-kicker{color:#8b1731;font-size:12px;font-weight:900;letter-spacing:.12em;line-height:1.35;margin:0 0 14px}
 .stage-hero{font-size:clamp(56px,11vw,112px);line-height:.88;letter-spacing:-.075em;font-weight:950;margin:6px auto 19px;width:100%;color:#66112b}
 .stage-hero span{color:#d39b14}.stage-hero .stage-dot{color:#78102d}
