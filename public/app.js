@@ -5,11 +5,11 @@ const escStore=()=>{try{const a=JSON.parse(localStorage.getItem('eco_seen_v2')||
 let player=null,session='',questions=[],step=0,score=0,busy=false,current='loading',retryTask=null,restoreFocus=null;
 const STAGES=['intro','challenge','leaderboard','suara','dukung','jelajah'];
 const NEXT_CTA={
- intro:'Mulai Jelajahi Zona Eco Lab →',
- challenge:'Mulai Tantangan Bumi ✳',
- leaderboard:'Punya cerita lingkungan? Sampaikan →',
- suara:'Suka inisiatif ini? Dukung Zonautara →',
- dukung:'Lanjut jelajahi data dan kisah iklim →',
+ intro:'Masuk ke Tantangan Bumi →',
+ challenge:'Main sekarang & rebut hadiah →',
+ leaderboard:'Punya cerita lingkungan? Suarakan →',
+ suara:'Lanjut dukung jurnalisme Zonautara →',
+ dukung:'Jelajahi peta & kisah iklim →',
  jelajah:'Kembali ke Awal ↻'
 };
 let activeStage='intro';
@@ -18,6 +18,7 @@ function setStage(name,{updateHash=true}={}){
  const n=maps[name]||name;
  if(!STAGES.includes(n))return;
  activeStage=n;
+ document.body.dataset.stage=n;
  document.body.classList.toggle('stage-is-intro',n==='intro');
  document.querySelectorAll('.kiosk-stage').forEach(section=>{
   const active=section.dataset.stage===n;
