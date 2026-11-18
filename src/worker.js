@@ -48,7 +48,7 @@ export async function handleApi(request,env,path){
   const questions=JSON.parse(s.questions_json),answers=JSON.parse(s.answers_json),idx=Object.keys(answers).length,q=questions[idx];
   if(!q||b.question_id!==q.id||!Number.isInteger(b.choice)||b.choice<0||b.choice>3)return err('Jawaban harus mengikuti urutan pertanyaan.');
   const next={...answers,[q.id]:b.choice};const correct=b.choice===q.answer;const score=s.score+(correct?1:0);
-  const r=await env.DB.prepare("UPDATE quiz_sessions SET answers_json=?,score=? WHERE id=? AND answers_json=? AND status='open'").bind(JSON.stringify(next),score,s.id,s.answers_json).run();
+  const r=await env.DB.prepare("UPDATE quiz_sessions SET answers_json=?,score=?,completed_at=CASE WHEN ?=5 THEN ? ELSE completed_at END WHERE id=? AND answers_json=? AND status='open'").bind(JSON.stringify(next),score,idx+1,Date.now(),s.id,s.answers_json).run();
   if(!r.meta?.changes)return err('Jawaban sudah diproses. Muat ulang atau mulai permainan baru.',409);
   return J({ok:true,correct,correct_index:q.answer,explanation:q.explanation,source_url:q.source_url,answered:idx+1,score});
  }
@@ -59,7 +59,7 @@ export async function handleApi(request,env,path){
   if(!field(b?.nickname,2,24))return err('Nama panggilan 2–24 karakter diperlukan.');
   if(!b?.public_consent)return err('Persetujuan untuk menampilkan nama panggilan diperlukan.');
   const nickname=clean(b.nickname),region=REGIONS.includes(b.region)?b.region:REGIONS.at(-1);
-  const duration=Math.max(1,Math.ceil((Date.now()-s.started_at)/1000));
+  const duration=Math.max(1,Math.ceil(((s.completed_at||Date.now())-s.started_at)/1000));
   await env.DB.prepare('INSERT OR IGNORE INTO quiz_results(session_id,nickname,region,score,duration_seconds) VALUES(?,?,?,?,?)').bind(s.id,nickname,region,s.score,duration).run();
   await env.DB.prepare("UPDATE quiz_sessions SET status='done' WHERE id=?").bind(s.id).run();
   const rec=await env.DB.prepare('SELECT nickname,score,duration_seconds FROM quiz_results WHERE session_id=?').bind(s.id).first();
