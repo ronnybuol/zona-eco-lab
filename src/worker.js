@@ -69,7 +69,7 @@ export async function handleApi(request,env,path){
   const b=await body(request);
   if(!TOPICS.includes(b?.topic)||!REGIONS.includes(b?.region))return err('Pilih isu dan wilayah.');
   if(typeof b.story!=='string'||b.story.length>650||typeof b.contact!=='string'||b.contact.length>120)return err('Cerita atau kontak terlalu panjang.');
-  if(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]/.test(b.story+b.contact))return err('Karakter tidak diizinkan.');
+  if([...b.story+b.contact].some(c=>{const n=c.charCodeAt(0);return n<32&&n!==9&&n!==10&&n!==13;}))return err('Karakter tidak diizinkan.');
   const contact=clean(b.contact);
   if(contact&&!b.allow_contact)return err('Izin dihubungi diperlukan untuk mengisi kontak.');
   await env.DB.prepare('INSERT INTO voices(topic,region,story,contact,allow_contact) VALUES(?,?,?,?,?)').bind(b.topic,b.region,clean(b.story),contact,contact&&b.allow_contact?1:0).run();
