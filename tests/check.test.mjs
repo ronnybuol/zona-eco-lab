@@ -65,7 +65,7 @@ test('Kuis memiliki tampilan layar penuh dengan footer tetap dan scroll internal
 test('Identitas sekali daftar, satu skor terbaik dan daftar petugas tersedia',()=>{
  const worker=read('src/worker.js'),admin=read('public/admin.html');
  for(const route of ['/api/player/register','/api/player/me','/api/admin/participants','/api/admin/participants/verify'])assert.ok(worker.includes(route));
- assert.ok(worker.includes("PARTITION BY COALESCE(participant_id"));
+ assert.ok(worker.includes("PARTITION BY COALESCE(r.participant_id"));
  assert.ok(worker.includes("sess.participant_id!==player.id"));
  assert.ok(worker.includes("token_hash"));
  assert.ok(admin.includes('data-tab="participants"'));
