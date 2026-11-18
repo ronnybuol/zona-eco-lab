@@ -1,13 +1,36 @@
 -- Audit kurasi 18 Nov 2026: simpan trivia lama sebagai arsip nonaktif, jangan hapus.
 -- Soal khusus liputan tetap dapat dipakai kelak untuk kuis membaca artikel.
 UPDATE quiz_questions SET active=0,updated_at=datetime('now')
-WHERE category='bolmong'
-  AND question NOT IN ('Bendungan Lolak berada di kabupaten mana?',
-  'Menurut laporan Zonautara, apa arti penurunan indeks kehijauan sawah dari citra satelit?',
-  'Bendungan Lolak dirancang memberi manfaat mana selain irigasi?',
-  'Apa yang dapat dipengaruhi kekeringan selain hasil panen, menurut cerita petani Bolmong?',
-  'Dalam menilai manfaat bendungan bagi warga, apa yang penting diperiksa?',
-  'Mengapa laporan Zonautara mendatangi sawah yang mendapat air dan yang masih kesulitan?');
+WHERE category='bolmong' AND question IN (
+  'Kapan Bendungan Lolak diresmikan menurut laporan Zonautara?',
+  'Luas layanan irigasi yang direncanakan dari Bendungan Lolak menurut BWS Sulawesi I?',
+  'Menurut BWS Sulawesi I dalam liputan 2026, berapa hektare irigasi eksisting telah memperoleh air?',
+  'Apa status pengembangan jaringan irigasi 1.306 hektare Lolak Atas dalam laporan November 2026?',
+  'Di desa mana Bendung Lolak Atas dalam liputan Zonautara berada?',
+  'Dalam kunjungan Oktober 2026, sekitar berapa panjang saluran utama yang terlihat di Bendung Lolak Atas?',
+  'Sektor mana menyumbang sekitar 40,49% PDRB Bolmong pada 2024 menurut laporan Zonautara?',
+  'Apa masalah yang dialami peternak di pesisir Inobonto saat kemarau 2026 menurut liputan?',
+  'Dalam laporan Zonautara, bagaimana keadaan jaringan irigasi Bolmong yang berkategori baik?',
+  'Apa kesimpulan aman tentang Bendungan Lolak dari laporan November 2026?',
+  'Menurut laporan Zonautara, instansi mana yang menjelaskan capaian layanan irigasi Bendungan Lolak?',
+  'Sekitar berapa biaya pembangunan dan pengawasan Bendungan Lolak yang disebut dalam laporan Zonautara?',
+  'Kapan tim Zonautara meninjau Bendung Lolak Atas untuk laporan November 2026?',
+  'Apa kondisi saluran utama Bendung Lolak Atas yang diamati tim saat kunjungan Oktober 2026?',
+  'Tanggal apa tercantum sebagai pembangunan pada dinding Bendung Lolak Atas menurut liputan?',
+  'Satelit apa yang digunakan Tim Data Zonautara menelusuri perubahan vegetasi sawah pada 2026?',
+  'Periode apa yang dibandingkan Zonautara dalam analisis kondisi vegetasi sawah tahun 2026?',
+  'Peta sawah dari lembaga mana turut digunakan untuk analisis satelit Zonautara?',
+  'Menurut liputan September 2026, berapa jumlah daerah irigasi yang dirangkum dalam data Bolmong?',
+  'Berapa luas total 75 daerah irigasi Bolmong dalam data yang dikutip Zonautara?',
+  'Sekitar berapa persen jaringan irigasi Bolmong berkondisi rusak berat dalam data liputan 2026?',
+  'Berapa persen kondisi jaringan irigasi Bolmong yang berkategori sedang menurut liputan?',
+  'Berapa persen kondisi jaringan irigasi Bolmong yang tercatat rusak ringan?',
+  'Apakah seluruh 75 daerah irigasi Bolmong berkondisi baik menurut data dalam liputan 2026?',
+  'Dalam liputan kemarau 2026, sekitar berapa liter air dibutuhkan empat sapi milik seorang peternak dalam sehari menurut kesaksiannya?',
+  'Di kecamatan mana petani dalam foto liputan 2026 terlihat beralih dari sawah menuju penanaman jagung?',
+  'Apa salah satu hambatan yang disebut BWS Sulawesi I dalam pembangunan jaringan irigasi Lolak pada 2025?',
+  'Nama rencana kawasan industri yang disebut terkait persoalan pengembangan irigasi Lolak?'
+);
 
 -- Pertanyaan kontekstual yang dapat dijawab dengan penalaran umum, bukan hafalan isi berita.
 INSERT OR IGNORE INTO quiz_questions(category,topic,question,options_json,correct_index,explanation,source_url,active) VALUES ('bolmong','Pertanian','Jika sawah di Lolak mengering saat kemarau, informasi mana yang paling membantu petani menentukan waktu tanam?','["Prakiraan musim dan ketersediaan air irigasi","Harga pupuk saja","Jadwal pasar mingguan","Jumlah kendaraan di jalan"]','0','Keputusan tanam perlu mempertimbangkan ketersediaan air dan kondisi musim, bukan satu faktor saja.','https://zonautara.com/2026/09/05/limbung-sawah-di-lumbung-beras/',1);
