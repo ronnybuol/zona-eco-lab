@@ -102,7 +102,7 @@ test('Enam ilustrasi editorial, urutan layar acara, hadiah, dan informasi Suara 
  assert.match(html,/HADIAH PERIODE/);
  assert.match(html,/Juara setiap 3 jam/);
  assert.match(html,/Dashboard Admin → Suara Bumi/);
- assert.match(html,/dipertimbangkan sebagai bahan liputan/);
+ assert.match(html,/Usulanmu dapat menjadi awal liputan/);
  assert.ok(js.includes("serverOffsetMs"));
  assert.ok(js.includes("boardMode='period'"));
  assert.match(html,/id="board-overall"/);
