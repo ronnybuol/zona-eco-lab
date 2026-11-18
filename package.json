@@ -1,0 +1,16 @@
+{
+  "name": "zona-eco-lab",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zona Eco Lab — mobile-first quiz and participatory environment microsite, powered by Cloudflare Workers+D1",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 migrations apply zona-eco-lab-db --local",
+    "db:remote": "wrangler d1 migrations apply zona-eco-lab-db --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
