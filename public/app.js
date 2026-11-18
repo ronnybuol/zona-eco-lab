@@ -6,7 +6,7 @@ async function api(url,data){const opts=data===undefined?{}:{method:'POST',heade
 function visible(id){['game-intro','game-question','game-result'].forEach(k=>el(k).classList.toggle('hidden',k!==id));if(id!=='game-intro'){const p=el(id);p.scrollIntoView({behavior:'smooth',block:'start'});p.focus({preventScroll:true});}}
 function message(id,text){el(id).textContent=text;}
 async function start(){if(blocked)return;blocked=true;el('start-game').disabled=true;message('game-status','Menyiapkan lima pertanyaan acak…');
- try{const d=await api('/api/quiz/start',{seen:escStore()});session=d.session_id;questions=d.questions;score=0;step=0;submitted=false;
+ try{const d=await api('/api/quiz/start',{seen:escStore()});session=d.session_id;questions=d.questions;score=0;step=0;submitted=false;el('save-score').disabled=false;el('result-form').reset();
   try{const seen=escStore();seen.push(...questions.map(q=>q.id));localStorage.setItem('eco_seen_v2',JSON.stringify([...new Set(seen)].slice(-400)));}catch{}
   message('game-status','Jawab soal satu per satu. Geser ke bawah jika penjelasan belum terlihat.');renderQuestion();visible('game-question');
  }catch(e){message('game-status','Belum bisa mulai: '+e.message+' Periksa koneksi, lalu coba lagi.');}
