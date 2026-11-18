@@ -4,7 +4,7 @@ Microsite **mobile-first** untuk Bolmong Eco Future, Jumat 20 November 2026, Lol
 
 ## Status versi 2
 - Kode berada di GitHub; **belum otomatis live** sampai D1 dan Cloudflare Workers Builds dihubungkan.
-- Basis data awal: **75 soal**, terdiri dari **16 soal lokal Bolmong** dan **59 soal umum**, dengan rujukan URL per soal.
+- Basis data awal: **139 soal**, terdiri dari **34 soal lokal Bolmong** dan **105 soal umum**, dengan rujukan URL per soal.
 - Setiap putaran: 2 Bolmong + 3 umum. Server mengacak soal **dan urutan opsi**. HP mengingat soal yang sudah pernah muncul; pengulangan baru terjadi ketika soal baru dari kategori itu habis atau riwayat browser hilang.
 - Skor dihitung **di server**, dengan sesi sekali pakai, lima jawaban berurutan, dan waktu penyelesaian dihitung sebelum pengetikan nama.
 - Admin menambah, mengubah, menonaktifkan dan **impor hingga 25 soal JSON per batch**; jangan mengimpor pertanyaan tanpa verifikasi.
@@ -16,7 +16,8 @@ Microsite **mobile-first** untuk Bolmong Eco Future, Jumat 20 November 2026, Lol
 public/               HTML, CSS, JS, dan logo untuk layar pengunjung/admin
 src/worker.js          API Workers, validasi server dan leaderboard
 migrations/0001_init.sql   Schema D1
-migrations/0002_seed_questions.sql  75 soal awal
+migrations/0002_seed_questions.sql  75 soal gelombang awal
+migrations/0003_expand_questions.sql  64 soal tambahan (total 139)
 wrangler.toml          Bindings (ID D1 WAJIB diganti)
 ```
 **R2 belum dipakai pada versi ringan ini**. Logo/CSS/JS disajikan dari Workers Static Assets (langsung dari repo). Tambah binding R2 hanya ketika ada penyimpanan foto atau berkas yang memang memerlukan R2. Jangan menaruh kontak warga dalam bucket publik.
@@ -42,7 +43,7 @@ Salin UUID `database_id` dari output. **Jangan memakai UUID semua nol yang masih
 ```bash
 npx wrangler d1 migrations apply zona-eco-lab-db --remote
 ```
-Skrip kedua mengisi 75 pertanyaan. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
+Skrip kedua dan ketiga mengisi 139 pertanyaan. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
 
 **D. Deploy pertama**:
 ```bash
