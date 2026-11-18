@@ -221,3 +221,32 @@ body.kiosk-mode.quiz-open{overflow:hidden}
  .stage-art-leaderboard{height:86px}
  .kiosk-stage[data-stage="suara"] .stage-art{height:78px}
 }
+
+/* Penyesuaian layar acara: logo asli hanya di perkenalan; ilustrasi SVG langsung di HTML. */
+.kiosk-text-brand{display:none;font-size:clamp(17px,4.5vw,24px);font-weight:950;letter-spacing:-.035em;color:#741832;white-space:nowrap}
+body.kiosk-mode:not(.stage-is-intro) .kiosk-logo{display:none}
+body.kiosk-mode:not(.stage-is-intro) .kiosk-text-brand{display:block}
+body.kiosk-mode.stage-is-intro .kiosk-logo{display:flex}
+body.kiosk-mode.stage-is-intro .kiosk-text-brand{display:none}
+svg.stage-art{flex:none;flex-shrink:0;display:block;width:100%;height:clamp(115px,22vh,195px);min-height:90px;overflow:hidden;visibility:visible;opacity:1}
+svg.stage-art-intro{height:clamp(160px,30vh,280px)}
+svg.stage-art-leaderboard{height:clamp(94px,18vh,152px)}
+svg.stage-art-suara{height:clamp(95px,17vh,135px)}
+svg.stage-art-dukung{height:clamp(122px,23vh,180px)}
+svg.stage-art-jelajah{height:clamp(125px,25vh,190px)}
+svg.stage-art-challenge{height:clamp(135px,26vh,195px)}
+.voice-name-hint{font-size:12px;margin:0 0 5px;line-height:1.4}
+@media(max-width:420px){
+ svg.stage-art{height:clamp(110px,20vh,165px)}
+ svg.stage-art-intro{height:clamp(160px,25vh,215px)}
+ svg.stage-art-leaderboard{height:clamp(90px,13vh,135px)}
+ svg.stage-art-suara{height:100px}
+ svg.stage-art-challenge{height:clamp(133px,23vh,165px)}
+}
+@media(max-height:650px){
+ .kiosk-stage .stage-center{justify-content:flex-start}
+ svg.stage-art{height:105px}
+ svg.stage-art-intro{height:145px}
+ svg.stage-art-leaderboard{height:86px}
+ svg.stage-art-suara{height:78px}
+}

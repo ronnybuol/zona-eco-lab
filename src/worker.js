@@ -163,10 +163,13 @@ export async function handleApi(request,env,path){
   const b=await body(request);
   if(!TOPICS.includes(b?.topic)||!REGIONS.includes(b?.region))return err('Pilih isu dan wilayah.');
   if(typeof b.story!=='string'||b.story.length>650||typeof b.contact!=='string'||b.contact.length>120)return err('Cerita atau kontak terlalu panjang.');
-  if([...b.story+b.contact].some(c=>{const n=c.charCodeAt(0);return n<32&&n!==9&&n!==10&&n!==13;}))return err('Karakter tidak diizinkan.');
-  const contact=clean(b.contact);
+  if(typeof b.contributor_name!=='string'||b.contributor_name.length>80)return err('Nama atau sapaan maksimal 80 karakter.');
+  if([...b.story+b.contact+b.contributor_name].some(c=>{const n=c.charCodeAt(0);return n<32&&n!==9&&n!==10&&n!==13;}))return err('Karakter tidak diizinkan.');
+  const contact=clean(b.contact),contributorName=clean(b.contributor_name);
+  if(contributorName&&!field(contributorName,2,80))return err('Nama atau sapaan harus 2–80 karakter.');
+  if(contact&&!contributorName)return err('Isi nama atau sapaan jika menyertakan kontak.');
   if(contact&&!b.allow_contact)return err('Izin dihubungi diperlukan untuk mengisi kontak.');
-  await env.DB.prepare('INSERT INTO voices(topic,region,story,contact,allow_contact) VALUES(?,?,?,?,?)').bind(b.topic,b.region,clean(b.story),contact,contact&&b.allow_contact?1:0).run();
+  await env.DB.prepare('INSERT INTO voices(topic,region,story,contact,allow_contact,contributor_name) VALUES(?,?,?,?,?,?)').bind(b.topic,b.region,clean(b.story),contact,contact&&b.allow_contact?1:0,contributorName).run();
   return J({ok:true,message:'Terima kasih. Cerita disimpan untuk ditinjau redaksi.'},201);
  }
  if(path.startsWith('/api/admin/')){
@@ -213,7 +216,7 @@ export async function handleApi(request,env,path){
   }
   if(path==='/api/admin/export'&&request.method==='GET'){
    const rows=await env.DB.prepare('SELECT * FROM voices ORDER BY id DESC LIMIT 10000').all();
-   const keys=['id','created_at','topic','region','story','contact','allow_contact','reviewed'];
+   const keys=['id','created_at','contributor_name','topic','region','story','contact','allow_contact','reviewed'];
    return new Response('\uFEFF'+[keys.map(csvCell).join(','),...(rows.results||[]).map(r=>keys.map(k=>csvCell(r[k])).join(','))].join('\r\n'),{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="suara-bumi.csv"','cache-control':'no-store'}});
   }
   if(path==='/api/admin/moderate'&&request.method==='POST'){

@@ -18,6 +18,7 @@ function setStage(name,{updateHash=true}={}){
  const n=maps[name]||name;
  if(!STAGES.includes(n))return;
  activeStage=n;
+ document.body.classList.toggle('stage-is-intro',n==='intro');
  document.querySelectorAll('.kiosk-stage').forEach(section=>{
   const active=section.dataset.stage===n;
   section.classList.toggle('is-active',active);
@@ -139,7 +140,7 @@ async function refreshBoard(){
  }
 }
 async function refreshStats(){try{const d=await api('/api/stats');const node=el('issue-bars');node.replaceChildren();const topics=d.topics||[];if(!topics.length){const p=document.createElement('p');p.className='muted';p.textContent='Belum ada pilihan isu yang terkumpul.';node.append(p);return;}const max=Math.max(...topics.map(t=>t.total));topics.forEach(t=>{const row=document.createElement('div');row.className='issue-row';const lbl=document.createElement('div');lbl.className='issue-label';const name=document.createElement('span');name.textContent=t.topic;const n=document.createElement('span');n.textContent=t.total;lbl.append(name,n);const track=document.createElement('div');track.className='issue-track';const bar=document.createElement('span');bar.style.width=(100*t.total/max)+'%';track.append(bar);row.append(lbl,track);node.append(row);});}catch(e){message('issue-bars','Statistik belum tersedia.');}}
-async function submitVoice(event){event.preventDefault();const f=el('voice-form');if(!f.reportValidity())return;const fd=new FormData(f);const data={topic:fd.get('topic'),region:fd.get('region'),story:String(fd.get('story')||''),contact:String(fd.get('contact')||'').trim(),allow_contact:el('voice-consent').checked};if(data.contact&&!data.allow_contact){message('voice-status','Centang persetujuan bila mengisi kontak.');return;}const btn=el('voice-send');btn.disabled=true;message('voice-status','Mengirim…');
+async function submitVoice(event){event.preventDefault();const f=el('voice-form');if(!f.reportValidity())return;const fd=new FormData(f);const data={topic:fd.get('topic'),region:fd.get('region'),contributor_name:String(fd.get('contributor_name')||'').trim(),story:String(fd.get('story')||''),contact:String(fd.get('contact')||'').trim(),allow_contact:el('voice-consent').checked};if(data.contact&&!data.contributor_name){message('voice-status','Jika ingin dihubungi, isi nama atau sapaan agar redaksi dapat menyapa dengan tepat.');el('voice-name').focus();return;}if(data.contact&&!data.allow_contact){message('voice-status','Centang persetujuan bila mengisi kontak.');return;}const btn=el('voice-send');btn.disabled=true;message('voice-status','Mengirim…');
  try{await api('/api/voice',data);message('voice-status','✓ Terima kasih! Pilihan dan ceritamu sudah diterima untuk ditinjau redaksi.');f.reset();refreshStats();}catch(e){message('voice-status','Belum berhasil dikirim: '+e.message);}finally{btn.disabled=false;}}
 
 document.addEventListener('DOMContentLoaded',()=>{

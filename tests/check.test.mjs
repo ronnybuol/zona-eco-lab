@@ -39,7 +39,7 @@ test('Semua pertanyaan punya 4 opsi unik, satu jawaban dan sumber HTTPS',()=>{
  }
 });
 test('Berkas aplikasi, logo resmi dan migrasi tersedia',()=>{
- for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','migrations/0007_event_awards.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
+ for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','migrations/0007_event_awards.sql','migrations/0008_voice_contributor_name.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
 });
 test('Kode JavaScript lolos pemeriksaan sintaks Node.js',()=>{
  for(const file of ['src/worker.js','public/app.js','public/admin.js']){
@@ -97,7 +97,7 @@ test('Enam ilustrasi editorial, urutan layar acara, hadiah, dan informasi Suara 
  assert.deepEqual(order,['intro','challenge','leaderboard','suara','dukung','jelajah']);
  for(const key of order){
   assert.ok(existsSync(new URL('../public/art/'+key+'.svg',import.meta.url)),key);
-  assert.ok(html.includes('/art/'+key+'.svg'));
+  assert.ok(html.includes('class="stage-art stage-art-'+key+'"'),key+' rendered inline');
  }
  assert.match(html,/Hadiah tiap 3 jam/);
  assert.match(html,/Dashboard Admin → Suara Bumi/);
@@ -110,4 +110,28 @@ test('Enam ilustrasi editorial, urutan layar acara, hadiah, dan informasi Suara 
  assert.ok(server.includes('EVENT_END_MS'));
  assert.ok(server.includes("quiz_award_snapshots"));
  assert.ok(server.includes("'/api/admin/awards/status'"));
+});
+
+
+test('SVG tertanam langsung, tanpa gambar eksternal atau logo palsu',()=>{
+ const html=read('public/index.html'),js=read('public/app.js'),css=read('public/style.css');
+ assert.equal((html.match(/<svg class="stage-art stage-art-/g)||[]).length,6);
+ assert.equal((html.match(/src="\/art\//g)||[]).length,0);
+ assert.equal((html.match(/src="\/logo-zonautara\.png"/g)||[]).length,1);
+ assert.ok(html.includes('class="kiosk-text-brand"'));
+ assert.ok(html.includes('class="kiosk-mode stage-is-intro"'));
+ assert.ok(js.includes("classList.toggle('stage-is-intro',n==='intro')"));
+ assert.ok(css.includes('svg.stage-art{flex:none;'));
+ for(const key of ['intro','challenge','leaderboard','suara','dukung','jelajah']){
+  assert.ok(html.includes('id="sky-'+key+'"'));
+ }
+});
+test('Nama atau panggilan pengirim Suara Bumi ada di UI, API, admin, dan migrasi',()=>{
+ const html=read('public/index.html'),js=read('public/app.js'),worker=read('src/worker.js'),admin=read('public/admin.js');
+ assert.ok(html.includes('id="voice-name"'));
+ assert.ok(js.includes("fd.get('contributor_name')"));
+ assert.ok(worker.includes('INSERT INTO voices(topic,region,story,contact,allow_contact,contributor_name)'));
+ assert.ok(worker.includes("'contributor_name','topic','region','story'"));
+ assert.ok(admin.includes('Pengirim: '));
+ assert.match(read('migrations/0008_voice_contributor_name.sql'),/ALTER TABLE voices ADD COLUMN contributor_name/);
 });
