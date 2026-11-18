@@ -16,7 +16,7 @@
 <main class="kiosk-main" id="app-stage">
 <section class="kiosk-stage is-active kiosk-intro" data-stage="intro" aria-labelledby="intro-title">
  <div class="stage-scroll stage-center">
-  <div class="intro-mark" aria-hidden="true">✳</div>
+  <img class="stage-art stage-art-intro" src="/art/intro.svg" alt="Ilustrasi lanskap sungai, sawah, pegunungan dan alam Bolaang Mongondow" loading="eager" decoding="async">
   <p class="stage-kicker">ZONAUTARA.COM · BOLMONG ECO FUTURE 2026</p>
   <h1 id="intro-title" class="stage-hero">ZONA <span>ECO</span> LAB<span class="stage-dot">.</span></h1>
   <p class="stage-lead">Main. Jelajahi. Ceritakan.</p>
@@ -27,10 +27,12 @@
 <section class="kiosk-stage" data-stage="challenge" aria-labelledby="challenge-title">
  <div class="stage-scroll stage-center">
   <p class="stage-kicker">01 · MAIN</p>
-  <div class="challenge-illustration" aria-hidden="true">✳</div>
+  <img class="stage-art stage-art-challenge" src="/art/challenge.svg" alt="Ilustrasi kartu kuis, trofi dan kado hadiah" loading="lazy" decoding="async">
   <h2 id="challenge-title" class="stage-heading">Tantangan Bumi</h2>
-  <p class="stage-lead">Lima soal. Seratus poin.</p>
-  <p class="stage-copy">Dapatkan hingga <strong>100 poin per permainan</strong>. Main berkali-kali untuk mengumpulkan total poin dan naik di leaderboard.</p>
+  <p class="stage-lead">Lima soal. Seratus poin. Banyak hadiah!</p>
+  <p class="stage-copy">Kumpulkan hingga <strong>100 poin tiap putaran</strong> dan terus naik peringkat. <strong>Juara setiap tiga jam berhak atas hadiah aksesori outdoor!</strong> Ada hadiah utama untuk juara umum saat penutupan pukul <strong>20.00 WITA</strong>.</p>
+  <div class="prize-strip"><span>🎁 Hadiah tiap 3 jam</span><span>🏆 Hadiah utama pukul 20.00</span></div>
+  <p class="muted small">Perhitungan resmi: Jumat, 20 November 2026 · 08.00–20.00 WITA. Pemenang diumumkan setelah verifikasi petugas.</p>
   <div class="feature-tags"><span>2 soal Bolmong</span><span>3 soal lingkungan</span><span>Acak tiap putaran</span></div>
   <p id="game-status" class="muted small" role="status">Profil pemain cukup dibuat sekali di perangkat ini.</p>
   <button id="skip-game" class="stage-text-button" type="button">Lewati permainan, lihat leaderboard →</button>
@@ -38,31 +40,33 @@
 </section>
 <section class="kiosk-stage" data-stage="leaderboard" aria-labelledby="leader-title">
  <div class="stage-scroll">
-  <p class="stage-kicker">02 · PARA PENJAGA BUMI</p>
+  <p class="stage-kicker">02 · PEREBUTAN HADIAH</p>
+  <img class="stage-art stage-art-leaderboard" src="/art/leaderboard.svg" alt="Ilustrasi podium juara, piala emas dan alam hijau" loading="lazy" decoding="async">
   <h2 id="leader-title" class="stage-heading">Leaderboard</h2>
-  <p class="stage-copy">Setiap jawaban benar bernilai <strong>20 poin</strong>. Poin dari seluruh permainan dijumlahkan. Makin sering bermain dan menjawab benar, makin tinggi posisimu!</p>
-  <div class="board-rules"><span><strong>1.</strong> Total poin</span><span><strong>2.</strong> Putaran 100 poin</span><span><strong>3.</strong> Rata-rata waktu</span></div>
-  <button id="refresh-board" class="stage-text-button" type="button">Perbarui peringkat ↻</button>
-  <div id="leader-rows" class="leader-rows"><p class="muted">Memuat peringkat…</p></div>
-  <p class="muted small">Jika total poin sama, lebih banyak putaran sempurna menang; berikutnya rata-rata waktu tercepat. Hadiah memerlukan pemeriksaan petugas di stan.</p>
- </div>
-</section>
-<section class="kiosk-stage" data-stage="jelajah" aria-labelledby="explore-title">
- <div class="stage-scroll stage-center">
-  <p class="stage-kicker">03 · JELAJAHI</p>
-  <h2 id="explore-title" class="stage-heading">Data punya cerita.</h2>
-  <p class="stage-copy">Krisis iklim bukan sekadar angka. Jelajahi peta dan kisah warga melalui dua proyek jurnalistik Zonautara.</p>
-  <div class="kiosk-link-cards">
-   <a href="https://iklimkita.com/pantau/" target="_blank" rel="noopener noreferrer" class="kiosk-link-card"><span class="link-icon" aria-hidden="true">◎</span><span><strong>Pantau Iklim</strong><small>Jelajahi laporan warga di peta.</small></span><span class="link-arrow">↗</span></a>
-   <a href="https://iklimkita.com/jejak/" target="_blank" rel="noopener noreferrer" class="kiosk-link-card"><span class="link-icon" aria-hidden="true">✦</span><span><strong>Jejak Iklim</strong><small>Baca kisah warga menghadapi perubahan iklim.</small></span><span class="link-arrow">↗</span></a>
+  <p class="stage-copy">Main lagi, kumpulkan poin, dan naik peringkat! Juara diumumkan tiap <strong>3 jam</strong>. Akumulasi seluruh poin tetap berlaku untuk <strong>juara umum</strong> hingga 20.00 WITA.</p>
+  <div class="event-meter">
+    <span id="event-period-label" class="event-period-title">Mengambil jadwal periode…</span>
+    <strong id="event-countdown" class="event-countdown">--:--:--</strong>
+    <p id="event-remaining" class="muted small">Pukul 08.00–20.00 WITA · 20 November 2026</p>
   </div>
+  <div class="board-switch" role="group" aria-label="Pilih jenis leaderboard">
+    <button id="board-period" class="board-switch-active" type="button">Periode Ini</button>
+    <button id="board-overall" type="button">Juara Umum</button>
+  </div>
+  <div id="board-view-period" class="board-view"><div id="leader-rows-period" class="leader-rows"><p class="muted">Memuat peringkat periode…</p></div></div>
+  <div id="board-view-overall" class="board-view hidden"><div id="leader-rows-overall" class="leader-rows"><p class="muted">Memuat peringkat umum…</p></div></div>
+  <button id="refresh-board" class="stage-text-button" type="button">Perbarui peringkat ↻</button>
+  <div class="winner-summary"><strong>🏅 Pengumuman juara periode</strong><div id="previous-winners"><p class="muted small">Belum ada periode yang selesai.</p></div></div>
+  <p class="muted small">Peringkat: total poin → jumlah permainan sempurna → rata-rata waktu tercepat. Status juara bersifat sementara sampai dikonfirmasi petugas di stan.</p>
  </div>
 </section>
 <section class="kiosk-stage" data-stage="suara" aria-labelledby="voice-title">
  <div class="stage-scroll">
-  <p class="stage-kicker">04 · CERITAKAN</p>
+  <p class="stage-kicker">03 · CERITAKAN</p>
+  <img class="stage-art stage-art-suara" src="/art/suara.svg" alt="Ilustrasi dialog warga dan catatan lingkungan" loading="lazy" decoding="async">
   <h2 id="voice-title" class="stage-heading">Suara Bumi</h2>
-  <p class="stage-copy">Persoalan lingkungan apa yang paling terasa di tempat tinggalmu? Bantu Zonautara mengetahui isu yang penting bagi warga.</p>
+  <p class="stage-copy">Persoalan lingkungan apa yang paling terasa di tempat tinggalmu? <strong>Informasi yang kamu kirim akan dibaca tim redaksi dan dapat dipertimbangkan sebagai bahan liputan Zonautara.</strong> Redaksi akan memeriksa informasi sebelum memberitakannya.</p>
+  <p class="voice-privacy-note">🔒 Cerita dan kontak tidak tampil di halaman publik. Kiriman masuk ke <strong>Dashboard Admin → Suara Bumi</strong>, dan hanya statistik jenis isu yang ditampilkan kepada pengunjung.</p>
   <form id="voice-form" class="voice-form stage-voice-form">
    <label for="voice-topic">Masalah paling dekat denganmu</label>
    <select id="voice-topic" name="topic" required><option value="">Pilih isu…</option><option>Sampah & plastik</option><option>Banjir & longsor</option><option>Air & kekeringan</option><option>Hutan & satwa</option><option>Pangan & pertanian</option><option>Pesisir & laut</option><option>Tambang & pencemaran</option><option>Lainnya</option></select>
@@ -81,8 +85,8 @@
 </section>
 <section class="kiosk-stage" data-stage="dukung" aria-labelledby="support-title">
  <div class="stage-scroll stage-center">
-  <p class="stage-kicker">05 · BERSAMA ZONAUTARA</p>
-  <div class="support-mark" aria-hidden="true">♥</div>
+  <p class="stage-kicker">04 · BERSAMA ZONAUTARA</p>
+  <img class="stage-art stage-art-dukung" src="/art/dukung.svg" alt="Ilustrasi dukungan warga untuk pekerjaan jurnalisme lingkungan" loading="lazy" decoding="async">
   <h2 id="support-title" class="stage-heading">Jurnalisme publik butuh dukunganmu.</h2>
   <p class="stage-copy">Dari sawah hingga pesisir, Zonautara terus menelusuri persoalan yang memengaruhi kehidupan warga. Dukung liputan independen agar kerja ini terus berjalan.</p>
   <div class="kiosk-link-cards">
@@ -91,6 +95,18 @@
   </div>
   <p class="muted small">Dukungan pembaca tidak memberikan hak mengatur isi pemberitaan.</p>
   <a href="https://zonautara.com/" target="_blank" rel="noopener noreferrer" class="stage-text-button">Kunjungi Zonautara.com ↗</a>
+ </div>
+</section>
+<section class="kiosk-stage" data-stage="jelajah" aria-labelledby="explore-title">
+ <div class="stage-scroll stage-center">
+  <p class="stage-kicker">05 · JELAJAHI LEBIH JAUH</p>
+  <img class="stage-art stage-art-jelajah" src="/art/jelajah.svg" alt="Ilustrasi peta, pin lokasi, serta grafik data iklim" loading="lazy" decoding="async">
+  <h2 id="explore-title" class="stage-heading">Data punya cerita.</h2>
+  <p class="stage-copy">Ini bagian terakhir untuk menjelajahi lebih jauh. Krisis iklim bukan sekadar angka; lihat laporan warga di peta dan baca kisah-kisah mereka.</p>
+  <div class="kiosk-link-cards">
+   <a href="https://iklimkita.com/pantau/" target="_blank" rel="noopener noreferrer" class="kiosk-link-card"><span class="link-icon" aria-hidden="true">◎</span><span><strong>Pantau Iklim</strong><small>Jelajahi laporan warga di peta.</small></span><span class="link-arrow">↗</span></a>
+   <a href="https://iklimkita.com/jejak/" target="_blank" rel="noopener noreferrer" class="kiosk-link-card"><span class="link-icon" aria-hidden="true">✦</span><span><strong>Jejak Iklim</strong><small>Baca kisah warga menghadapi perubahan iklim.</small></span><span class="link-arrow">↗</span></a>
+  </div>
  </div>
 </section>
 </main>
