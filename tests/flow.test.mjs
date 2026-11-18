@@ -17,7 +17,7 @@ function makeDB({manualQuestion=false}={}){
   }
   sql.exec(read('migrations/'+migrations[i]));
  }
- const wrapper={prepare(query){
+ const wrapper={async batch(statements){const results=[];for(const statement of statements)results.push(await statement.run());return results;},prepare(query){
   const statement=sql.prepare(query);let params=[];
   const obj={bind(...vals){params=vals;return obj;},
    async first(){return statement.get(...params)??null;},
