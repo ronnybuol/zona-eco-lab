@@ -14,9 +14,41 @@ async function saveQuestion(e){e.preventDefault();const b=$('question-form').que
 async function bulkImport(){let data;try{data=JSON.parse($('json-import').value);if(!Array.isArray(data))throw Error('Harus berupa array JSON.');}catch(e){note('Impor dibatalkan: '+e.message);return;}const b=$('import-submit');b.disabled=true;try{const r=await request('/api/admin/questions/import',{questions:data});const d=await r.json();note('Berhasil memproses '+d.processed+' pertanyaan (duplikat dilewati).');$('json-import').value='';await loadQuestions();}catch(e){note('Impor gagal: '+e.message);}finally{b.disabled=false;}}
 function renderVoices(){const list=$('voice-list');list.replaceChildren();if(!voices.length){list.append(text('p','Belum ada kiriman.','muted'));return;}voices.forEach(v=>{const card=document.createElement('article');card.className='admin-card';card.append(text('p','#'+v.id+' · '+v.created_at+' · '+v.region,'micro'),text('h3',v.topic),text('p',v.story||'(Hanya memilih kategori)'),text('p',v.contact?'Kontak (izin: '+(v.allow_contact?'ya':'tidak')+'): '+v.contact:'Tanpa kontak'));const label=document.createElement('label');label.className='check';const box=document.createElement('input');box.type='checkbox';box.checked=!!v.reviewed;label.append(box,text('span','Sudah ditinjau redaksi'));box.addEventListener('change',async()=>{box.disabled=true;try{await request('/api/admin/moderate',{id:v.id,reviewed:box.checked});note('Tanda tinjauan disimpan.');}catch(e){box.checked=!box.checked;note(e.message);}finally{box.disabled=false;}});card.append(label);list.append(card);});}
 async function loadVoices(){const r=await request('/api/admin/voices');voices=(await r.json()).records;renderVoices();}
-function setTab(tab){document.querySelectorAll('.tab').forEach(btn=>{btn.classList.toggle('active',btn.dataset.tab===tab);});$('panel-questions').classList.toggle('hidden',tab!=='questions');$('panel-voices').classList.toggle('hidden',tab!=='voices');if(tab==='voices')loadVoices().catch(e=>note(e.message));}
+async function loadParticipants(){
+ const result=await request('/api/admin/participants');const data=await result.json();
+ const list=$('participant-list');list.replaceChildren();
+ if(!data.participants.length){list.append(text('p','Belum ada profil peserta.','muted'));return;}
+ data.participants.forEach(p=>{
+  const card=document.createElement('article');card.className='admin-card';
+  card.append(text('p',p.code+' · '+(p.verified?'TERVERIFIKASI':'BELUM DIVERIFIKASI'),'micro'));
+  card.append(text('h3',p.nickname+' — '+p.region));
+  const editName=document.createElement('button');editName.className='btn quiet';editName.type='button';editName.textContent='Koreksi nama panggilan';
+  editName.addEventListener('click',async()=>{
+   const name=window.prompt('Nama panggilan yang benar untuk '+p.code+':',p.nickname);
+   if(name===null)return;
+   if(name.trim().length<2||name.trim().length>24){note('Nama harus 2–24 karakter.');return;}
+   editName.disabled=true;
+   try{await request('/api/admin/participants/rename',{id:p.id,nickname:name.trim()});note('Nama profil diperbaiki tanpa menghapus skor.');await loadParticipants();}
+   catch(e){note('Perbaikan gagal: '+e.message);}
+   finally{editName.disabled=false;}
+  });
+  card.append(editName);
+  card.append(text('p','Skor terbaik: '+(p.best_score??'—')+'/5 · Durasi: '+(p.best_seconds??'—')+' detik · '+p.plays+' kali bermain'));
+  const label=document.createElement('label');label.className='check';
+  const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!p.verified;
+  label.append(checkbox,text('span','Kode sudah dicocokkan langsung dengan HP peserta di stan'));
+  checkbox.addEventListener('change',async()=>{
+   checkbox.disabled=true;
+   try{await request('/api/admin/participants/verify',{id:p.id,verified:checkbox.checked});note('Status peserta '+p.code+' disimpan.');}
+   catch(e){checkbox.checked=!checkbox.checked;note('Gagal: '+e.message);}
+   finally{checkbox.disabled=false;}
+  });
+  card.append(label);list.append(card);
+ });
+}
+function setTab(tab){document.querySelectorAll('.tab').forEach(btn=>{btn.classList.toggle('active',btn.dataset.tab===tab);});$('panel-questions').classList.toggle('hidden',tab!=='questions');$('panel-voices').classList.toggle('hidden',tab!=='voices');$('panel-participants').classList.toggle('hidden',tab!=='participants');if(tab==='voices')loadVoices().catch(e=>note(e.message));if(tab==='participants')loadParticipants().catch(e=>note(e.message));}
 async function downloadCsv(){try{const r=await request('/api/admin/export');const blob=await r.blob();const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='suara-bumi.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);note('CSV berhasil diunduh. Simpan dengan aman.');}catch(e){note(e.message);}}
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('secret').value.trim();$('secret').value='';try{await loadQuestions();$('login-form').classList.add('hidden');$('admin-area').classList.remove('hidden');note('Dashboard siap digunakan.');}catch(e){token='';note('Login gagal: '+e.message);}});
-$('question-form').addEventListener('submit',saveQuestion);$('q-reset').addEventListener('click',resetEdit);$('q-search').addEventListener('input',renderQuestions);$('import-submit').addEventListener('click',bulkImport);$('export-csv').addEventListener('click',downloadCsv);
+$('question-form').addEventListener('submit',saveQuestion);$('q-reset').addEventListener('click',resetEdit);$('q-search').addEventListener('input',renderQuestions);$('import-submit').addEventListener('click',bulkImport);$('export-csv').addEventListener('click',downloadCsv);$('refresh-participants').addEventListener('click',()=>loadParticipants().catch(e=>note(e.message)));
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>setTab(btn.dataset.tab)));
 $('logout').addEventListener('click',()=>{token='';questions=[];voices=[];document.querySelectorAll('input').forEach(x=>{if(x.type==='password')x.value='';});$('admin-area').classList.add('hidden');$('login-form').classList.remove('hidden');note('Sesi dashboard ditutup.');});

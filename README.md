@@ -2,13 +2,15 @@
 
 Microsite **mobile-first** untuk Bolmong Eco Future, Jumat 20 November 2026, Lolak. Konten: **Tantangan Bumi**, **leaderboard**, **Jelajah Iklim**, **Suara Bumi**, dan dashboard admin untuk bank soal. Identitas Zonautara berasal dari aset logo resmi yang disediakan redaksi.
 
-## Status versi 2
-- Kode berada di GitHub; **belum otomatis live** sampai D1 dan Cloudflare Workers Builds dihubungkan.
-- Basis data awal: **139 soal**, terdiri dari **34 soal lokal Bolmong** dan **105 soal umum**, dengan rujukan URL per soal.
+## Status versi 3 (18 November 2026)
+- Aplikasi produksi terhubung ke Cloudflare Workers: https://zona-eco-lab.ronny-buol.workers.dev/. Gunakan `main` untuk versi produksi; branch fitur harus lolos pemeriksaan terlebih dahulu.
+- Setelah migrasi 0005: **169 soal tersimpan**, **141 aktif** (36 Bolmong kontekstual dan 105 umum), sementara 28 trivia detail liputan dinonaktifkan tanpa dihapus.
 - Setiap putaran: 2 Bolmong + 3 umum. Server mengacak soal **dan urutan opsi**. HP mengingat soal yang sudah pernah muncul; pengulangan baru terjadi ketika soal baru dari kategori itu habis atau riwayat browser hilang.
-- Skor dihitung **di server**, dengan sesi sekali pakai, lima jawaban berurutan, dan waktu penyelesaian dihitung sebelum pengetikan nama.
+- Permainan **satu tahap satu layar penuh**: profil sekali, soal, pembahasan, lalu soal selanjutnya. Scroll hanya di area isi jika HP sangat pendek; tombol aksi tetap di bawah.
+- Profil nama panggilan dan wilayah didaftarkan sekali per browser/HP tanpa nomor telepon. Token acak hanya disimpan di perangkat, hash token di D1; kode peserta ditampilkan di hasil. Main ulang otomatis mempertahankan nama.
+- Server menilai jawaban; leaderboard hanya menyimpan satu **skor terbaik per profil**, dengan waktu tercepat sebagai pembanding.
 - Admin menambah, mengubah, menonaktifkan dan **impor hingga 25 soal JSON per batch**; jangan mengimpor pertanyaan tanpa verifikasi.
-- Leaderboard **rekreatif**. Nama panggilan bisa dibuat bebas, sehingga **tidak cukup untuk menetapkan pemenang hadiah** tanpa verifikasi peserta.
+- Leaderboard **rekreatif**: perangkat/browser lain dapat membuat profil tambahan. Untuk hadiah, petugas mencocokkan kode di HP melalui tab Peserta dan melakukan verifikasi langsung. WhatsApp tidak wajib.
 - Suara Bumi memerlukan persetujuan untuk menyimpan kontak; cerita dan kontak tidak tampil publik.
 
 ## Struktur
@@ -18,7 +20,9 @@ src/worker.js          API Workers, validasi server dan leaderboard
 migrations/0001_init.sql   Schema D1
 migrations/0002_seed_questions.sql  75 soal gelombang awal
 migrations/0003_expand_questions.sql  64 soal tambahan (total 139)
-wrangler.toml          Bindings (ID D1 WAJIB diganti)
+migrations/0004_participants.sql  profil peserta dan skor terhubung
+migrations/0005_curate_bolmong.sql  28 trivia nonaktif dan 30 soal situasional
+wrangler.toml          Bindings produksi D1
 ```
 **R2 belum dipakai pada versi ringan ini**. Logo/CSS/JS disajikan dari Workers Static Assets (langsung dari repo). Tambah binding R2 hanya ketika ada penyimpanan foto atau berkas yang memang memerlukan R2. Jangan menaruh kontak warga dalam bucket publik.
 
@@ -33,17 +37,17 @@ npx wrangler login
 ```
 Login melalui browser yang terbuka, gunakan akun Cloudflare pengelola Worker yang benar.
 
-**B. Buat database D1**:
+**B. Database D1 (sudah disiapkan untuk produksi)**:
 ```bash
 npx wrangler d1 create zona-eco-lab-db
 ```
-Salin UUID `database_id` dari output. **Jangan memakai UUID semua nol yang masih ada di `wrangler.toml`**. Perbarui `database_id` di GitHub atau file lokal; commit perubahan jika dari lokal. Nama database dan binding tetap: `zona-eco-lab-db` dan `DB`.
+Database produksi sudah ada dan ID-nya telah tercatat dalam konfigurasi. Jangan membuat database baru untuk deployment acara.
 
 **C. Jalankan migrasi database PRODUKSI** (sekali untuk tiap migrasi baru):
 ```bash
-npx wrangler d1 migrations apply zona-eco-lab-db --remote
+npx wrangler d1 migrations apply DB --remote
 ```
-Skrip kedua dan ketiga mengisi 139 pertanyaan. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
+Skrip 0002 dan 0003 mengisi 139 soal; 0004 menambah profil tanpa menghapus skor lama; 0005 mengkurasi trivia dan menambah soal kontekstual. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
 
 **D. Deploy pertama**:
 ```bash
@@ -56,9 +60,9 @@ npx wrangler secret put ADMIN_TOKEN
 Gunakan token acak minimal 32 karakter (bukan kata sandi biasa). Untuk pengembangan lokal, dapat menggunakan `.dev.vars` yang sudah diabaikan oleh git.
 
 **E. Hubungkan GitHub → Cloudflare untuk deploy otomatis**:
-Cloudflare Dashboard → **Workers & Pages** → pilih Worker `zona-eco-lab` → **Settings → Builds → Connect** → hubungkan GitHub dan pilih **ronnybuol/zona-eco-lab**, branch produksi **main**. Pastikan nama Worker cocok dengan `wrangler.toml`. Build command: `npm test` (atau sesuaikan instalasi dependensi otomatis pada Workers Builds); deploy command: `npx wrangler deploy`.
+Cloudflare Dashboard → **Workers & Pages** → pilih Worker `zona-eco-lab` → **Settings → Builds → Connect** → hubungkan GitHub dan pilih **ronnybuol/zona-eco-lab**, branch produksi **main**. Pastikan nama Worker cocok dengan `wrangler.toml`. Build command: `npm test` (atau sesuaikan instalasi dependensi otomatis pada Workers Builds); deploy command: `npx wrangler d1 migrations apply DB --remote && npx wrangler deploy`.
 
-Setelah terhubung, setiap commit yang di-push/merge ke `main` bisa memicu deployment otomatis. **Migrasi database tetap tugas terpisah** bila nantinya schema berubah. Cloudflare akan membangun versi repo terbaru, bukan membaca percakapan ChatGPT secara otomatis. Perubahan dari chat harus lebih dulu di-commit ke repo menggunakan konektor GitHub.
+Setelah terhubung, setiap commit yang di-push/merge ke `main` bisa memicu deployment otomatis. Deploy command produksi saat ini menerapkan migrasi D1 sebelum menerbitkan Worker. Periksa log dan siapkan backup untuk setiap perubahan skema. Cloudflare akan membangun versi repo terbaru, bukan membaca percakapan ChatGPT secara otomatis. Perubahan dari chat harus lebih dulu di-commit ke repo menggunakan konektor GitHub.
 
 **F. Jalankan pemeriksaan otomatis kode sebelum dan setelah pembaruan:**
 ```bash
@@ -106,3 +110,10 @@ Leaderboard mengutamakan skor benar, lalu durasi. Sistem mencatat sesi server da
 
 ## Privasi & operasional
 Jangan unggah token API, password, atau identitas warga ke repo publik. Cerita warga tidak tampil publik; yang muncul hanya agregat pilihan kategori. Pertimbangkan aturan retensi/hapus data setelah acara, backup CSV dengan pengamanan, rate limiting WAF, dan Turnstile bila trafik tidak terkendali. Untuk perawatan kode, ikuti `AGENTS.md`.
+
+## Pengujian dan hadiah
+- Uji profil baru, lalu uji bermain ulang dari browser sama: nama tetap dan leaderboard hanya satu entri terbaik.
+- Dashboard /admin.html memiliki tab Peserta. Petugas mencocokkan kode yang tampil di HP, lalu menandai akun terverifikasi.
+- Kode peserta bukan bukti identitas yang kuat. Tanpa login/nomor telepon, satu orang masih dapat membuat beberapa akun melalui browser atau HP lain. Hadiah tetap memerlukan verifikasi manusia.
+- Jangan mengumumkan hadiah otomatis dari papan peringkat. Kontak untuk hadiah dikumpulkan secara terpisah hanya bila diperlukan dan dengan persetujuan.
+- Setelah acara, tinjau retensi profil pemain dan data kontak. Skor uji versi lama tetap ada sebagai entri legacy hingga dibersihkan secara terkontrol.

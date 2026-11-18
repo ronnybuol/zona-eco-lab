@@ -11,15 +11,35 @@ function pick(pool,count,seen){const fresh=mix(pool.filter(q=>!seen.has(q.id)));
 function publicQuestion(q){return {id:q.id,category:q.category,topic:q.topic,question:q.question,options:q.options};}
 async function activeQuestions(env){return (await env.DB.prepare('SELECT id,category,topic,question,options_json,correct_index,explanation,source_url FROM quiz_questions WHERE active=1 ORDER BY id LIMIT 4000').all()).results||[];}
 async function getSession(env,id){if(!field(id,30,100))return null;return await env.DB.prepare('SELECT * FROM quiz_sessions WHERE id=?').bind(id).first();}
+async function playerFromToken(env,token){
+ if(typeof token!=='string'||!/^[a-f0-9]{64}$/.test(token))return null;
+ const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');
+ return env.DB.prepare('SELECT id,code,nickname,region FROM quiz_participants WHERE token_hash=?').bind(hash).first();
+}
 function sessionExpired(session){return !session||session.started_at<Date.now()-7200000||session.status!=='open';}
 function checkQuestion(data){if(!data||!['bolmong','umum'].includes(data.category)||!field(data.topic,2,60)||!field(data.question,15,280)||!Array.isArray(data.options)||data.options.length!==4||!data.options.every(a=>field(a,1,180))||new Set(data.options.map(x=>x.trim().toLowerCase())).size!==4||!Number.isInteger(data.correct_index)||data.correct_index<0||data.correct_index>3||!field(data.explanation,15,500)||!field(data.source_url,12,500))return 'Lengkapi kategori, topik, soal, empat opsi unik, indeks jawaban, pembahasan, dan URL sumber.';try{const u=new URL(data.source_url);if(u.protocol!=='https:')return 'Rujukan harus HTTPS.';}catch{return 'URL rujukan tidak valid.';}return null;}
 const csvCell=v=>{let s=String(v??'');if(/^[\s]*[=+@\-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
 export async function handleApi(request,env,path){
  if(path==='/api/health'&&request.method==='GET')return J({ok:true,db:!!env.DB});
  if(!env.DB)return err('D1 belum terhubung.',503);
+ if(path==='/api/player/register'&&request.method==='POST'){
+  const b=await body(request,4000);
+  if(!field(b?.nickname,2,24)||!REGIONS.includes(b.region)||b.public_consent!==true)return err('Isi nama panggilan, wilayah, dan persetujuan leaderboard.');
+  const token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');
+  const code='ECO-'+Array.from(crypto.getRandomValues(new Uint8Array(5)),b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+  const id=crypto.randomUUID(),nickname=clean(b.nickname);
+  await env.DB.prepare('INSERT INTO quiz_participants(id,token_hash,code,nickname,region) VALUES(?,?,?,?,?)').bind(id,hash,code,nickname,b.region).run();
+  return J({ok:true,token,player:{nickname,region:b.region,code}},201);
+ }
+ if(path==='/api/player/me'&&request.method==='POST'){
+  const b=await body(request,2000);const p=await playerFromToken(env,b?.token);
+  if(!p)return err('Profil di perangkat ini tidak ditemukan. Buat profil baru.',401);
+  return J({ok:true,player:{nickname:p.nickname,region:p.region,code:p.code}});
+ }
  if(path==='/api/stats'&&request.method==='GET'){
   const [players,voices,topics,qs]=await Promise.all([
-   env.DB.prepare('SELECT COUNT(*) n FROM quiz_results').first(),
+   env.DB.prepare("SELECT COUNT(DISTINCT COALESCE(participant_id,'legacy-'||session_id)) n FROM quiz_results").first(),
    env.DB.prepare('SELECT COUNT(*) n FROM voices').first(),
    env.DB.prepare('SELECT topic,COUNT(*) total FROM voices GROUP BY topic ORDER BY total DESC').all(),
    env.DB.prepare("SELECT category,COUNT(*) n FROM quiz_questions WHERE active=1 GROUP BY category").all()
@@ -27,18 +47,20 @@ export async function handleApi(request,env,path){
   return J({ok:true,players:players?.n||0,voices:voices?.n||0,topics:topics.results||[],questions:qs.results||[]});
  }
  if(path==='/api/leaderboard'&&request.method==='GET'){
-  const rows=await env.DB.prepare('SELECT nickname,region,score,duration_seconds,created_at FROM quiz_results ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 20').all();
+  const rows=await env.DB.prepare("SELECT nickname,region,score,duration_seconds,created_at FROM (SELECT COALESCE(p.nickname,r.nickname) nickname,COALESCE(p.region,r.region) region,r.score,r.duration_seconds,r.created_at,ROW_NUMBER() OVER (PARTITION BY COALESCE(r.participant_id,'legacy-'||r.session_id) ORDER BY r.score DESC,r.duration_seconds ASC,r.created_at ASC) attempt_rank FROM quiz_results r LEFT JOIN quiz_participants p ON r.participant_id=p.id) ranked WHERE attempt_rank=1 ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 20").all();
   return J({ok:true,leaders:(rows.results||[]).map((r,i)=>({...r,rank:i+1})),notice:'Leaderboard rekreatif; nama panggilan belum diverifikasi sebagai identitas untuk hadiah.'});
  }
  if(path==='/api/quiz/start'&&request.method==='POST'){
   const b=await body(request,6000);
+  const player=await playerFromToken(env,b?.token);
+  if(!player)return err('Profil pemain tidak ditemukan. Daftarkan ulang dari aplikasi.',401);
   const seen=new Set(Array.isArray(b?.seen)?b.seen.filter(x=>Number.isInteger(x)&&x>0).slice(-400):[]);
   const pool=await activeQuestions(env);const local=pool.filter(x=>x.category==='bolmong'),global=pool.filter(x=>x.category==='umum');
   if(local.length<2||global.length<3)return err('Bank soal belum cukup; jalankan migrasi D1.',503);
   const selected=mix([...pick(local,2,seen),...pick(global,3,seen)]);
   const questions=selected.map(q=>{const raw=JSON.parse(q.options_json);const o=mix(raw.map((text,idx)=>({text,correct:idx===q.correct_index})));return {id:q.id,category:q.category,topic:q.topic,question:q.question,options:o.map(x=>x.text),answer:o.findIndex(x=>x.correct),explanation:q.explanation,source_url:q.source_url};});
   const id=crypto.randomUUID(),now=Date.now();
-  await env.DB.prepare("INSERT INTO quiz_sessions(id,started_at,questions_json,answers_json,score,status) VALUES(?,?,?,'{}',0,'open')").bind(id,now,JSON.stringify(questions)).run();
+  await env.DB.prepare("INSERT INTO quiz_sessions(id,started_at,questions_json,answers_json,score,status,participant_id) VALUES(?,?,?,'{}',0,'open',?)").bind(id,now,JSON.stringify(questions),player.id).run();
   return J({ok:true,session_id:id,questions:questions.map(publicQuestion),mix:{bolmong:2,umum:3}});
  }
  if(path==='/api/quiz/answer'&&request.method==='POST'){
@@ -53,17 +75,18 @@ export async function handleApi(request,env,path){
   return J({ok:true,correct,correct_index:q.answer,explanation:q.explanation,source_url:q.source_url,answered:idx+1,score});
  }
  if(path==='/api/quiz/finish'&&request.method==='POST'){
-  const b=await body(request);
-  const s=await getSession(env,b?.session_id);if(!s||s.started_at<Date.now()-7200000)return err('Sesi permainan kedaluwarsa.',410);
-  if(Object.keys(JSON.parse(s.answers_json)).length!==5)return err('Semua lima soal harus dijawab.');
-  if(!field(b?.nickname,2,24))return err('Nama panggilan 2–24 karakter diperlukan.');
-  if(!b?.public_consent)return err('Persetujuan untuk menampilkan nama panggilan diperlukan.');
-  const nickname=clean(b.nickname),region=REGIONS.includes(b.region)?b.region:REGIONS.at(-1);
-  const duration=Math.max(1,Math.ceil(((s.completed_at||Date.now())-s.started_at)/1000));
-  await env.DB.prepare('INSERT OR IGNORE INTO quiz_results(session_id,nickname,region,score,duration_seconds) VALUES(?,?,?,?,?)').bind(s.id,nickname,region,s.score,duration).run();
-  await env.DB.prepare("UPDATE quiz_sessions SET status='done' WHERE id=?").bind(s.id).run();
-  const rec=await env.DB.prepare('SELECT nickname,score,duration_seconds FROM quiz_results WHERE session_id=?').bind(s.id).first();
-  return J({ok:true,score:rec.score,total:5,duration_seconds:rec.duration_seconds,nickname:rec.nickname});
+  const b=await body(request,3000),player=await playerFromToken(env,b?.token);
+  if(!player)return err('Profil pemain tidak ditemukan.',401);
+  const sess=await getSession(env,b?.session_id);
+  if(!sess||sess.started_at<Date.now()-7200000)return err('Sesi permainan kedaluwarsa.',410);
+  if(sess.participant_id!==player.id)return err('Sesi bukan milik pemain ini.',403);
+  if(Object.keys(JSON.parse(sess.answers_json)).length!==5)return err('Semua lima soal harus dijawab.');
+  const duration=Math.max(1,Math.ceil(((sess.completed_at||Date.now())-sess.started_at)/1000));
+  await env.DB.prepare('INSERT OR IGNORE INTO quiz_results(session_id,participant_id,nickname,region,score,duration_seconds) VALUES(?,?,?,?,?,?)').bind(sess.id,player.id,player.nickname,player.region,sess.score,duration).run();
+  await env.DB.prepare("UPDATE quiz_sessions SET status='done' WHERE id=?").bind(sess.id).run();
+  const rec=await env.DB.prepare('SELECT nickname,score,duration_seconds FROM quiz_results WHERE session_id=?').bind(sess.id).first();
+  const best=await env.DB.prepare('SELECT score,duration_seconds FROM quiz_results WHERE participant_id=? ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 1').bind(player.id).first();
+  return J({ok:true,score:rec.score,total:5,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_score:best.score,best_duration_seconds:best.duration_seconds});
  }
  if(path==='/api/voice'&&request.method==='POST'){
   const b=await body(request);
@@ -77,6 +100,24 @@ export async function handleApi(request,env,path){
  }
  if(path.startsWith('/api/admin/')){
   if(!auth(request,env))return err('Akses admin ditolak.',401);
+  if(path==='/api/admin/participants'&&request.method==='GET'){
+   const rows=await env.DB.prepare("SELECT p.id,p.code,p.nickname,p.region,p.verified,p.verified_at,p.created_at,(SELECT score FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_score,(SELECT duration_seconds FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_seconds,(SELECT COUNT(*) FROM quiz_results r WHERE r.participant_id=p.id) plays FROM quiz_participants p ORDER BY best_score DESC,best_seconds ASC,p.created_at ASC LIMIT 500").all();
+   return J({ok:true,participants:rows.results||[]});
+  }
+  if(path==='/api/admin/participants/rename'&&request.method==='POST'){
+   const b=await body(request,3000);
+   if(typeof b?.id!=='string'||!/^[0-9a-f-]{36}$/.test(b.id)||!field(b.nickname,2,24))return err('Kode peserta atau nama panggilan tidak valid.');
+   const result=await env.DB.prepare('UPDATE quiz_participants SET nickname=? WHERE id=?').bind(clean(b.nickname),b.id).run();
+   if(!result.meta?.changes)return err('Peserta tidak ditemukan.',404);
+   return J({ok:true});
+  }
+  if(path==='/api/admin/participants/verify'&&request.method==='POST'){
+   const b=await body(request,3000);
+   if(typeof b?.id!=='string'||!/^[0-9a-f-]{36}$/.test(b.id)||typeof b.verified!=='boolean')return err('Data verifikasi tidak valid.');
+   const result=await env.DB.prepare("UPDATE quiz_participants SET verified=?,verified_at=CASE WHEN ?=1 THEN datetime('now') ELSE NULL END WHERE id=?").bind(b.verified?1:0,b.verified?1:0,b.id).run();
+   if(!result.meta?.changes)return err('Peserta tidak ditemukan.',404);
+   return J({ok:true});
+  }
   if(path==='/api/admin/voices'&&request.method==='GET'){
    const rows=await env.DB.prepare('SELECT * FROM voices ORDER BY id DESC LIMIT 500').all();return J({ok:true,records:rows.results||[]});
   }
