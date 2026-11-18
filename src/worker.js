@@ -47,7 +47,7 @@ export async function handleApi(request,env,path){
   return J({ok:true,players:players?.n||0,voices:voices?.n||0,topics:topics.results||[],questions:qs.results||[]});
  }
  if(path==='/api/leaderboard'&&request.method==='GET'){
-  const rows=await env.DB.prepare("SELECT nickname,region,score,duration_seconds,created_at FROM (SELECT nickname,region,score,duration_seconds,created_at,ROW_NUMBER() OVER (PARTITION BY COALESCE(participant_id,'legacy-'||session_id) ORDER BY score DESC,duration_seconds ASC,created_at ASC) attempt_rank FROM quiz_results) ranked WHERE attempt_rank=1 ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 20").all();
+  const rows=await env.DB.prepare("SELECT nickname,region,score,duration_seconds,created_at FROM (SELECT COALESCE(p.nickname,r.nickname) nickname,COALESCE(p.region,r.region) region,r.score,r.duration_seconds,r.created_at,ROW_NUMBER() OVER (PARTITION BY COALESCE(r.participant_id,'legacy-'||r.session_id) ORDER BY r.score DESC,r.duration_seconds ASC,r.created_at ASC) attempt_rank FROM quiz_results r LEFT JOIN quiz_participants p ON r.participant_id=p.id) ranked WHERE attempt_rank=1 ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 20").all();
   return J({ok:true,leaders:(rows.results||[]).map((r,i)=>({...r,rank:i+1})),notice:'Leaderboard rekreatif; nama panggilan belum diverifikasi sebagai identitas untuk hadiah.'});
  }
  if(path==='/api/quiz/start'&&request.method==='POST'){
@@ -103,6 +103,13 @@ export async function handleApi(request,env,path){
   if(path==='/api/admin/participants'&&request.method==='GET'){
    const rows=await env.DB.prepare("SELECT p.id,p.code,p.nickname,p.region,p.verified,p.verified_at,p.created_at,(SELECT score FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_score,(SELECT duration_seconds FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_seconds,(SELECT COUNT(*) FROM quiz_results r WHERE r.participant_id=p.id) plays FROM quiz_participants p ORDER BY best_score DESC,best_seconds ASC,p.created_at ASC LIMIT 500").all();
    return J({ok:true,participants:rows.results||[]});
+  }
+  if(path==='/api/admin/participants/rename'&&request.method==='POST'){
+   const b=await body(request,3000);
+   if(typeof b?.id!=='string'||!/^[0-9a-f-]{36}$/.test(b.id)||!field(b.nickname,2,24))return err('Kode peserta atau nama panggilan tidak valid.');
+   const result=await env.DB.prepare('UPDATE quiz_participants SET nickname=? WHERE id=?').bind(clean(b.nickname),b.id).run();
+   if(!result.meta?.changes)return err('Peserta tidak ditemukan.',404);
+   return J({ok:true});
   }
   if(path==='/api/admin/participants/verify'&&request.method==='POST'){
    const b=await body(request,3000);
