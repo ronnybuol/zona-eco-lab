@@ -89,6 +89,9 @@ test('Verifikasi hadiah hanya untuk petugas berotorisasi',async()=>{
  assert.equal(list.status,200);
  assert.equal(list.data.participants[0].code,registered.data.player.code);
  const id=list.data.participants[0].id;
+ const correction=await call(env,'/api/admin/participants/rename',{id,nickname:'Peserta Diperbaiki'},secret);
+ assert.equal(correction.status,200);
+ assert.equal(sql.prepare('SELECT nickname FROM quiz_participants WHERE id=?').get(id).nickname,'Peserta Diperbaiki');
  assert.equal((await call(env,'/api/admin/participants/verify',{id,verified:true},secret)).status,200);
  assert.equal(sql.prepare('SELECT verified FROM quiz_participants WHERE id=?').get(id).verified,1);
  sql.close();
