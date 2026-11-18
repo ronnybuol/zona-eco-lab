@@ -148,7 +148,7 @@ test('Final visual: enam hero scene penuh, hadiah utama, CTA dan logo resmi',()=
  assert.ok(html.includes('HADIAH UTAMA'));
  assert.ok(html.includes('Jurnalisme publik'));
  assert.ok(html.includes('Bisa menang')||html.includes('Rebut hadiah'));
- assert.ok(html.includes('v=20261118c'));
+ assert.ok(html.includes('v=20261118d'));
  assert.ok(js.includes('document.body.dataset.stage=n'));
  assert.ok(js.includes("challenge:'Main sekarang & rebut hadiah →'"));
  assert.match(css,/\.art-scene\s*svg\.stage-art/);
