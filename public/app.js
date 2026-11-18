@@ -3,11 +3,52 @@ const el=id=>document.getElementById(id);
 const message=(id,text)=>{el(id).textContent=text;};
 const escStore=()=>{try{const a=JSON.parse(localStorage.getItem('eco_seen_v2')||'[]');return Array.isArray(a)?a.filter(Number.isInteger).slice(-400):[];}catch{return [];}};
 let player=null,session='',questions=[],step=0,score=0,busy=false,current='loading',retryTask=null,restoreFocus=null;
+const STAGES=['intro','challenge','leaderboard','jelajah','suara','dukung'];
+const NEXT_CTA={
+ intro:'Mulai Jelajahi Zona Eco Lab →',
+ challenge:'Mulai Tantangan Bumi ✳',
+ leaderboard:'Jelajahi Peta & Kisah Iklim →',
+ jelajah:'Ceritakan Suara Bumi →',
+ suara:'Dukung Zonautara ♥',
+ dukung:'Kembali ke Awal ↻'
+};
+let activeStage='intro';
+function setStage(name,{updateHash=true}={}){
+ const maps={top:'intro',game:'challenge',pantau:'jelajah',voice:'suara',support:'dukung'};
+ const n=maps[name]||name;
+ if(!STAGES.includes(n))return;
+ activeStage=n;
+ document.querySelectorAll('.kiosk-stage').forEach(section=>{
+  const active=section.dataset.stage===n;
+  section.classList.toggle('is-active',active);
+  section.setAttribute('aria-hidden',String(!active));
+  if(active) section.querySelector('.stage-scroll').scrollTop=0;
+ });
+ const pos=STAGES.indexOf(n);
+ message('stage-count',String(pos+1).padStart(2,'0')+' / 06');
+ message('stage-next',NEXT_CTA[n]);
+ el('stage-back').disabled=pos===0;
+ if(updateHash)history.replaceState(null,'','#'+n);
+ if(n==='leaderboard')refreshBoard();
+ if(n==='suara')refreshStats();
+}
+function nextStage(){
+ const i=STAGES.indexOf(activeStage);
+ if(activeStage==='challenge'){openQuiz();return;}
+ setStage(STAGES[(i+1)%STAGES.length]);
+}
+function previousStage(){
+ const i=STAGES.indexOf(activeStage);
+ if(i>0)setStage(STAGES[i-1]);
+}
+function resumeFromHash(){const raw=decodeURIComponent(location.hash.replace(/^#/,''));setStage(raw||'intro',{updateHash:false});}
+
 try{const p=JSON.parse(localStorage.getItem('eco_player_v1')||'null');if(p&&typeof p.token==='string'&&p.token.length===64)player=p;}catch{}
 async function api(path,data){const opts=data===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)};const response=await fetch(path,{...opts,cache:'no-store'});let result;try{result=await response.json();}catch{throw Error('Respons server tidak valid.');}if(!response.ok||!result.ok)throw Error(result.error||'Terjadi gangguan jaringan.');return result;}
 function screen(name){current=name;document.querySelectorAll('#quiz-layer .quiz-screen').forEach(node=>node.classList.toggle('hidden',node.id!=='quiz-'+name));const state=name==='profile'?['DAFTAR PEMAIN','SEKALI SAJA',0]:name==='result'?['HASIL PERMAINAN','SELESAI',100]:name==='loading'?['TANTANGAN BUMI','MEMUAT',0]:name==='error'?['TANTANGAN BUMI','COBA LAGI',0]:['TANTANGAN BUMI','SOAL '+(step+1)+' / 5',20*(step+1)];message('quiz-phase',state[0]);message('quiz-step-label',state[1]);el('quiz-progress-bar').style.width=state[2]+'%';const target=el('quiz-'+name).querySelector('.quiz-scroll');if(target)target.scrollTop=0;el('quiz-layer').setAttribute('aria-label',name==='question'?'Pertanyaan '+(step+1)+' dari 5':'Tantangan Bumi');}
-function openLayer(){restoreFocus=document.activeElement;document.body.classList.add('quiz-open');el('quiz-layer').classList.remove('hidden');el('quiz-close').focus();}
-function closeLayer(){document.body.classList.remove('quiz-open');el('quiz-layer').classList.add('hidden');restoreFocus?.focus?.();el('game-status').textContent=player?'Profil pemain sudah tersimpan. Main lagi kapan pun.':'Siap bermain dari HP. Profil cukup dibuat sekali.';}
+function openLayer(){restoreFocus=document.activeElement;document.body.classList.add('quiz-open');el('quiz-layer').classList.remove('hidden');el('quiz-layer').setAttribute('tabindex','-1');el('quiz-layer').focus();}
+function closeLayer(destination='leaderboard'){document.body.classList.remove('quiz-open');el('quiz-layer').classList.add('hidden');current='loading';setStage(destination);restoreFocus?.focus?.();message('game-status',player?'Profil pemain tersimpan. Main lagi kapan pun.':'Profil cukup dibuat sekali di perangkat ini.');}
+function quitQuiz(){if(current==='question'||current==='feedback'){if(!window.confirm('Keluar dari kuis? Putaran yang belum selesai tidak akan mendapat poin.'))return;}closeLayer('leaderboard');}
 function errorScreen(error,retry){message('quiz-error-message',error?.message||String(error));retryTask=retry;screen('error');}
 async function openQuiz(){openLayer();if(current==='question'||current==='feedback'||current==='result'){screen(current);return;}screen('loading');if(!player){screen('profile');return;}
  try{const data=await api('/api/player/me',{token:player.token});player={...player,...data.player};await startRound();}
@@ -28,27 +69,48 @@ async function answerQuestion(choice){if(busy)return;busy=true;const buttons=[..
  finally{busy=false;}
 }
 function advance(){if(busy||current!=='feedback')return;if(step<4){step++;renderQuestion();}else{finishRound();}}
-async function finishRound(){screen('loading');busy=true;try{const data=await api('/api/quiz/finish',{session_id:session,token:player.token});score=data.score;message('quiz-result-score',score);message('quiz-result-title',score===5?'Penjaga Bumi!':score>=3?'Sahabat Bumi!':'Penjelajah Bumi!');message('quiz-result-summary','Terima kasih, '+data.nickname+'! Kamu sudah menyelesaikan lima pertanyaan.');message('quiz-result-name',data.nickname);message('quiz-result-code',data.code);message('quiz-result-best','Skor terbaikmu: '+data.best_score+'/5 · Durasi terbaik: '+data.best_duration_seconds+' detik.');message('quiz-result-status','Skor berhasil dicatat. Satu profil hanya memiliki satu entri terbaik di leaderboard.');screen('result');refreshBoard();}
+async function finishRound(){screen('loading');busy=true;try{const data=await api('/api/quiz/finish',{session_id:session,token:player.token});score=data.score;message('quiz-result-score',data.points);message('quiz-result-title',score===5?'Penjaga Bumi!':score>=3?'Sahabat Bumi!':'Penjelajah Bumi!');message('quiz-result-summary','Terima kasih, '+data.nickname+'! Kamu memperoleh '+data.points+' dari 100 poin dalam putaran ini.');message('quiz-result-name',data.nickname);message('quiz-result-code',data.code);message('quiz-result-best','Total poinmu: '+data.total_points+' · Sudah bermain '+data.rounds+' kali · Putaran terbaik: '+data.best_points+'/100.');message('quiz-result-status','Poin sudah ditambahkan ke leaderboard. Main lagi untuk mengejar peserta di posisi atas!');screen('result');refreshBoard();}
  catch(e){errorScreen(Error('Skor belum dapat disimpan: '+e.message),finishRound);}finally{busy=false;}
 }
-async function share(){const text='Aku mendapat '+score+'/5 pada Tantangan Bumi di ZONA ECO LAB! Ayo coba dari HP-mu: '+location.origin+'/';if(navigator.share){try{await navigator.share({title:'Tantangan Bumi',text});return;}catch(e){if(e.name==='AbortError')return;}}try{await navigator.clipboard.writeText(text);message('quiz-result-status','Teks hasil disalin. Tempel ke WhatsApp atau media sosial.');}catch{window.prompt('Salin hasil permainan:',text);}}
-async function refreshBoard(){try{const d=await api('/api/leaderboard'),node=el('leader-rows');node.replaceChildren();if(!d.leaders.length){const p=document.createElement('p');p.className='muted';p.textContent='Belum ada skor tercatat. Jadilah pemain pertama!';node.append(p);return;}
- d.leaders.forEach(r=>{const row=document.createElement('div');row.className='leader-row';const rank=document.createElement('div');rank.className='rank';rank.textContent='#'+r.rank;const person=document.createElement('div');const name=document.createElement('div');name.className='leader-name';name.textContent=r.nickname;const region=document.createElement('div');region.className='leader-meta';region.textContent=r.region;person.append(name,region);const value=document.createElement('div');value.className='leader-score';value.textContent=r.score+'/5';const time=document.createElement('div');time.className='leader-time';time.textContent=r.duration_seconds+' dtk';row.append(rank,person,value,time);node.append(row);});}catch(e){message('leader-rows','Leaderboard belum tersedia: '+e.message);}}
+async function share(){const text='Aku mendapat '+(score*20)+'/100 poin pada Tantangan Bumi ZONA ECO LAB! Ayo kumpulkan poinmu: '+location.origin+'/';if(navigator.share){try{await navigator.share({title:'Tantangan Bumi',text});return;}catch(e){if(e.name==='AbortError')return;}}try{await navigator.clipboard.writeText(text);message('quiz-result-status','Teks hasil disalin. Tempel ke WhatsApp atau media sosial.');}catch{window.prompt('Salin hasil permainan:',text);}}
+async function refreshBoard(){
+ try{
+  const d=await api('/api/leaderboard'),node=el('leader-rows');node.replaceChildren();
+  if(!d.leaders.length){const p=document.createElement('p');p.className='muted';p.textContent='Belum ada skor tercatat. Jadilah pemain pertama!';node.append(p);return;}
+  d.leaders.forEach(r=>{
+   const row=document.createElement('div');row.className='leader-row';
+   const rank=document.createElement('div');rank.className='rank';rank.textContent='#'+r.rank;
+   const person=document.createElement('div');
+   const name=document.createElement('div');name.className='leader-name';name.textContent=r.nickname;
+   const region=document.createElement('div');region.className='leader-meta';region.textContent=r.region;
+   person.append(name,region);
+   const value=document.createElement('div');const points=document.createElement('div');points.className='leader-score';points.textContent=r.total_points+' poin';
+   const detail=document.createElement('div');detail.className='leader-detail';detail.textContent=r.rounds+'× main · '+r.perfect_rounds+'× sempurna';
+   value.append(points,detail);row.append(rank,person,value);node.append(row);
+  });
+ }catch(e){message('leader-rows','Leaderboard belum tersedia: '+e.message);}
+}
 async function refreshStats(){try{const d=await api('/api/stats');const node=el('issue-bars');node.replaceChildren();const topics=d.topics||[];if(!topics.length){const p=document.createElement('p');p.className='muted';p.textContent='Belum ada pilihan isu yang terkumpul.';node.append(p);return;}const max=Math.max(...topics.map(t=>t.total));topics.forEach(t=>{const row=document.createElement('div');row.className='issue-row';const lbl=document.createElement('div');lbl.className='issue-label';const name=document.createElement('span');name.textContent=t.topic;const n=document.createElement('span');n.textContent=t.total;lbl.append(name,n);const track=document.createElement('div');track.className='issue-track';const bar=document.createElement('span');bar.style.width=(100*t.total/max)+'%';track.append(bar);row.append(lbl,track);node.append(row);});}catch(e){message('issue-bars','Statistik belum tersedia.');}}
 async function submitVoice(event){event.preventDefault();const f=el('voice-form');if(!f.reportValidity())return;const fd=new FormData(f);const data={topic:fd.get('topic'),region:fd.get('region'),story:String(fd.get('story')||''),contact:String(fd.get('contact')||'').trim(),allow_contact:el('voice-consent').checked};if(data.contact&&!data.allow_contact){message('voice-status','Centang persetujuan bila mengisi kontak.');return;}const btn=el('voice-send');btn.disabled=true;message('voice-status','Mengirim…');
  try{await api('/api/voice',data);message('voice-status','✓ Terima kasih! Pilihan dan ceritamu sudah diterima untuk ditinjau redaksi.');f.reset();refreshStats();}catch(e){message('voice-status','Belum berhasil dikirim: '+e.message);}finally{btn.disabled=false;}}
 
 document.addEventListener('DOMContentLoaded',()=>{
- el('start-game').addEventListener('click',openQuiz);
- el('quiz-close').addEventListener('click',closeLayer);
+ resumeFromHash();
+ el('stage-next').addEventListener('click',nextStage);
+ el('stage-back').addEventListener('click',previousStage);
+ el('skip-game').addEventListener('click',()=>setStage('leaderboard'));
  el('quiz-profile-form').addEventListener('submit',registerPlayer);
  el('quiz-next').addEventListener('click',advance);
  el('quiz-replay').addEventListener('click',startRound);
  el('quiz-share').addEventListener('click',share);
+ el('quiz-finish').addEventListener('click',()=>closeLayer('leaderboard'));
+ el('quiz-quit-question').addEventListener('click',quitQuiz);
+ el('quiz-quit-feedback').addEventListener('click',quitQuiz);
  el('quiz-retry').addEventListener('click',()=>{if(retryTask)retryTask();else openQuiz();});
  el('refresh-board').addEventListener('click',refreshBoard);
  el('voice-form').addEventListener('submit',submitVoice);
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('quiz-layer').classList.contains('hidden'))closeLayer();});
- message('game-status','Satu soal per layar · 5 pertanyaan · Bisa main ulang');
+ window.addEventListener('hashchange',resumeFromHash);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('quiz-layer').classList.contains('hidden'))quitQuiz();});
+ message('game-status','Satu soal per layar · 5 pertanyaan · Main ulang menambah poin');
  refreshBoard();refreshStats();
 });
