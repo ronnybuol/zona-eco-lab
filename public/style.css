@@ -417,3 +417,28 @@ body.kiosk-mode[data-stage="jelajah"] .kiosk-forward{background:#ffcf54;border:1
 @media(prefers-reduced-motion:reduce){
  .kiosk-stage.is-active{animation:none}
 }
+
+/* Final UX pass: answer feedback and compact quiz rhythm. No app logic changes. */
+#quiz-question .quiz-scroll{padding-top:clamp(22px,4vh,42px)}
+#quiz-question .quiz-options{gap:clamp(11px,1.8vh,16px)}
+#quiz-question .quiz-choice{min-height:clamp(58px,8vh,72px)}
+#quiz-feedback .quiz-scroll{padding-top:clamp(28px,6vh,65px)}
+#quiz-feedback .quiz-feedback-title{font-size:clamp(27px,7vw,41px);line-height:1.14;margin-top:8px!important;max-width:700px}
+#quiz-feedback .quiz-big-mark{width:62px;height:62px;font-size:34px;font-weight:950;margin-bottom:14px}
+#quiz-feedback.is-incorrect .quiz-big-mark{background:#f9e6e2;color:#a1223d}
+#quiz-feedback.is-incorrect .quiz-feedback-title{color:#881f3b}
+#quiz-feedback .quiz-explanation{line-height:1.48}
+#quiz-result .quiz-scroll{padding-top:clamp(20px,4vh,38px)}
+#quiz-result .quiz-result-card{margin:15px auto;padding:13px 16px}
+#quiz-result .quiz-note{line-height:1.4;margin-top:12px}
+@media(max-width:420px){
+ #quiz-question .quiz-choice{min-height:58px}
+ #quiz-feedback .quiz-scroll{padding-top:clamp(23px,5vh,42px)}
+ #quiz-feedback .quiz-feedback-title{font-size:clamp(27px,7.5vw,32px)}
+ #quiz-result .quiz-score-number{margin-bottom:10px}
+}
+@media(max-height:620px){
+ #quiz-question .quiz-scroll,#quiz-feedback .quiz-scroll,#quiz-result .quiz-scroll{padding-top:13px}
+ #quiz-question .quiz-choice{min-height:51px}
+ #quiz-feedback .quiz-big-mark{width:48px;height:48px;font-size:27px;margin-bottom:9px}
+}
