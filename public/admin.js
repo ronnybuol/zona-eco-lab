@@ -22,6 +22,17 @@ async function loadParticipants(){
   const card=document.createElement('article');card.className='admin-card';
   card.append(text('p',p.code+' · '+(p.verified?'TERVERIFIKASI':'BELUM DIVERIFIKASI'),'micro'));
   card.append(text('h3',p.nickname+' — '+p.region));
+  const editName=document.createElement('button');editName.className='btn quiet';editName.type='button';editName.textContent='Koreksi nama panggilan';
+  editName.addEventListener('click',async()=>{
+   const name=window.prompt('Nama panggilan yang benar untuk '+p.code+':',p.nickname);
+   if(name===null)return;
+   if(name.trim().length<2||name.trim().length>24){note('Nama harus 2–24 karakter.');return;}
+   editName.disabled=true;
+   try{await request('/api/admin/participants/rename',{id:p.id,nickname:name.trim()});note('Nama profil diperbaiki tanpa menghapus skor.');await loadParticipants();}
+   catch(e){note('Perbaikan gagal: '+e.message);}
+   finally{editName.disabled=false;}
+  });
+  card.append(editName);
   card.append(text('p','Skor terbaik: '+(p.best_score??'—')+'/5 · Durasi: '+(p.best_seconds??'—')+' detik · '+p.plays+' kali bermain'));
   const label=document.createElement('label');label.className='check';
   const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!p.verified;
