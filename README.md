@@ -56,11 +56,17 @@ npx wrangler secret put ADMIN_TOKEN
 Gunakan token acak minimal 32 karakter (bukan kata sandi biasa). Untuk pengembangan lokal, dapat menggunakan `.dev.vars` yang sudah diabaikan oleh git.
 
 **E. Hubungkan GitHub → Cloudflare untuk deploy otomatis**:
-Cloudflare Dashboard → **Workers & Pages** → pilih Worker `zona-eco-lab` → **Settings → Builds → Connect** → hubungkan GitHub dan pilih **ronnybuol/zona-eco-lab**, branch produksi **main**. Pastikan nama Worker cocok dengan `wrangler.toml`. Build command: `npm install` (atau kosong jika Workers Builds menginstal dependency otomatis); deploy command: `npx wrangler deploy`.
+Cloudflare Dashboard → **Workers & Pages** → pilih Worker `zona-eco-lab` → **Settings → Builds → Connect** → hubungkan GitHub dan pilih **ronnybuol/zona-eco-lab**, branch produksi **main**. Pastikan nama Worker cocok dengan `wrangler.toml`. Build command: `npm test` (atau sesuaikan instalasi dependensi otomatis pada Workers Builds); deploy command: `npx wrangler deploy`.
 
 Setelah terhubung, setiap commit yang di-push/merge ke `main` bisa memicu deployment otomatis. **Migrasi database tetap tugas terpisah** bila nantinya schema berubah. Cloudflare akan membangun versi repo terbaru, bukan membaca percakapan ChatGPT secara otomatis. Perubahan dari chat harus lebih dulu di-commit ke repo menggunakan konektor GitHub.
 
-**F. Cek melalui HP sebelum mencetak QR**:
+**F. Jalankan pemeriksaan otomatis kode sebelum dan setelah pembaruan:**
+```bash
+npm test
+```
+GitHub Actions (`.github/workflows/check.yml`) juga memeriksa tiap push ke `main`. Pemeriksaan ini memvalidasi struktur soal, sintaks JavaScript, dan aset utama, tetapi belum menggantikan uji Worker produksi dengan D1 maupun uji lintas-browser di HP.
+
+**G. Cek melalui HP sebelum mencetak QR**:
 1. Buka `https://zona-eco-lab.<subdomain-anda>.workers.dev/` atau domain kustom setelah disetel.
 2. Buka `/api/health` dan cek `"db":true`.
 3. Mainkan lima soal, lihat pembahasan, isi nama panggilan, cek leaderboard. Main ulang dan lihat pertanyaan berbeda.
