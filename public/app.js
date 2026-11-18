@@ -3,14 +3,14 @@ const el=id=>document.getElementById(id);
 const message=(id,text)=>{el(id).textContent=text;};
 const escStore=()=>{try{const a=JSON.parse(localStorage.getItem('eco_seen_v2')||'[]');return Array.isArray(a)?a.filter(Number.isInteger).slice(-400):[];}catch{return [];}};
 let player=null,session='',questions=[],step=0,score=0,busy=false,current='loading',retryTask=null,restoreFocus=null;
-const STAGES=['intro','challenge','leaderboard','jelajah','suara','dukung'];
+const STAGES=['intro','challenge','leaderboard','suara','dukung','jelajah'];
 const NEXT_CTA={
  intro:'Mulai Jelajahi Zona Eco Lab →',
  challenge:'Mulai Tantangan Bumi ✳',
- leaderboard:'Jelajahi Peta & Kisah Iklim →',
- jelajah:'Ceritakan Suara Bumi →',
- suara:'Dukung Zonautara ♥',
- dukung:'Kembali ke Awal ↻'
+ leaderboard:'Punya cerita lingkungan? Sampaikan →',
+ suara:'Suka inisiatif ini? Dukung Zonautara →',
+ dukung:'Lanjut jelajahi data dan kisah iklim →',
+ jelajah:'Kembali ke Awal ↻'
 };
 let activeStage='intro';
 function setStage(name,{updateHash=true}={}){
@@ -69,26 +69,74 @@ async function answerQuestion(choice){if(busy)return;busy=true;const buttons=[..
  finally{busy=false;}
 }
 function advance(){if(busy||current!=='feedback')return;if(step<4){step++;renderQuestion();}else{finishRound();}}
-async function finishRound(){screen('loading');busy=true;try{const data=await api('/api/quiz/finish',{session_id:session,token:player.token});score=data.score;message('quiz-result-score',data.points);message('quiz-result-title',score===5?'Penjaga Bumi!':score>=3?'Sahabat Bumi!':'Penjelajah Bumi!');message('quiz-result-summary','Terima kasih, '+data.nickname+'! Kamu memperoleh '+data.points+' dari 100 poin dalam putaran ini.');message('quiz-result-name',data.nickname);message('quiz-result-code',data.code);message('quiz-result-best','Total poinmu: '+data.total_points+' · Sudah bermain '+data.rounds+' kali · Putaran terbaik: '+data.best_points+'/100.');message('quiz-result-status','Poin sudah ditambahkan ke leaderboard. Main lagi untuk mengejar peserta di posisi atas!');screen('result');refreshBoard();}
+async function finishRound(){screen('loading');busy=true;try{const data=await api('/api/quiz/finish',{session_id:session,token:player.token});score=data.score;message('quiz-result-score',data.points);message('quiz-result-title',score===5?'Penjaga Bumi!':score>=3?'Sahabat Bumi!':'Penjelajah Bumi!');message('quiz-result-summary','Terima kasih, '+data.nickname+'! Kamu memperoleh '+data.points+' dari 100 poin dalam putaran ini.');message('quiz-result-name',data.nickname);message('quiz-result-code',data.code);message('quiz-result-best',data.counts_for_prize?'Poin periode ini: '+data.period_points+' · Poin juara umum: '+data.event_total_points+' · Putaran terbaik: '+data.best_points+'/100.':'Putaran uji coba: '+data.points+' poin. Poin hadiah resmi mulai dihitung Jumat 20 November pukul 08.00 WITA.');message('quiz-result-status',data.counts_for_prize?'Poin sudah dihitung untuk hadiah periode dan juara umum. Main lagi untuk mengejar puncak peringkat!':'Latihan berhasil disimpan, tetapi tidak dihitung sebagai poin hadiah sebelum atau sesudah jam resmi acara.');screen('result');refreshBoard();}
  catch(e){errorScreen(Error('Skor belum dapat disimpan: '+e.message),finishRound);}finally{busy=false;}
 }
 async function share(){const text='Aku mendapat '+(score*20)+'/100 poin pada Tantangan Bumi ZONA ECO LAB! Ayo kumpulkan poinmu: '+location.origin+'/';if(navigator.share){try{await navigator.share({title:'Tantangan Bumi',text});return;}catch(e){if(e.name==='AbortError')return;}}try{await navigator.clipboard.writeText(text);message('quiz-result-status','Teks hasil disalin. Tempel ke WhatsApp atau media sosial.');}catch{window.prompt('Salin hasil permainan:',text);}}
+let liveBoard=null,boardMode='period',serverOffsetMs=0;
+const countFmt=ms=>{
+ const seconds=Math.max(0,Math.floor(ms/1000));
+ return [Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');
+};
+function countDownTick(){
+ if(!liveBoard)return;
+ const now=Date.now()+serverOffsetMs;
+ const target=liveBoard.phase==='upcoming'?liveBoard.event_start_ms:liveBoard.phase==='active'?liveBoard.period.end_ms:liveBoard.event_end_ms;
+ message('event-countdown',liveBoard.phase==='closed'?'00:00:00':countFmt(target-now));
+ if(now>=target&&liveBoard.phase!=='closed'&&!document.hidden&&activeStage==='leaderboard')refreshBoard();
+}
+function boardTab(which){
+ boardMode=which;
+ el('board-period').classList.toggle('board-switch-active',which==='period');
+ el('board-overall').classList.toggle('board-switch-active',which==='overall');
+ el('board-period').setAttribute('aria-pressed',String(which==='period'));
+ el('board-overall').setAttribute('aria-pressed',String(which==='overall'));
+ el('board-view-period').classList.toggle('hidden',which!=='period');
+ el('board-view-overall').classList.toggle('hidden',which!=='overall');
+}
+function fillLeaders(id,leaders,empty){
+ const node=el(id);node.replaceChildren();
+ if(!leaders.length){const p=document.createElement('p');p.className='muted';p.textContent=empty;node.append(p);return;}
+ leaders.forEach(r=>{
+  const row=document.createElement('div');row.className='leader-row';
+  const rank=document.createElement('div');rank.className='rank';rank.textContent='#'+r.rank;
+  const person=document.createElement('div');
+  const name=document.createElement('div');name.className='leader-name';name.textContent=r.nickname;
+  const region=document.createElement('div');region.className='leader-meta';region.textContent=r.region+' · '+(r.code||'');
+  person.append(name,region);
+  const value=document.createElement('div');
+  const points=document.createElement('div');points.className='leader-score';points.textContent=r.total_points+' poin';
+  const detail=document.createElement('div');detail.className='leader-detail';detail.textContent=r.rounds+'× main · '+r.perfect_rounds+'× 100 poin';
+  value.append(points,detail);row.append(rank,person,value);node.append(row);
+ });
+}
+function announceWinners(winners){
+ const box=el('previous-winners');box.replaceChildren();
+ if(!winners.length){const p=document.createElement('p');p.className='muted small';p.textContent='Belum ada periode yang selesai. Pengumuman tampil di sini setelah periode ditutup.';box.append(p);return;}
+ for(const w of winners.slice().reverse()){
+  const item=document.createElement('div');item.className='winner-item';
+  const period=document.createElement('strong');period.textContent=w.period==='umum'?'🏆 Juara Umum':'🏅 Periode '+w.period;
+  const user=document.createElement('span');user.textContent=w.code+' · '+w.nickname+' · '+w.points+' poin';
+  const badge=document.createElement('small');badge.textContent=w.status==='confirmed'?'Sudah diverifikasi':'Menunggu verifikasi petugas';
+  item.append(period,user,badge);box.append(item);
+ }
+}
 async function refreshBoard(){
  try{
-  const d=await api('/api/leaderboard'),node=el('leader-rows');node.replaceChildren();
-  if(!d.leaders.length){const p=document.createElement('p');p.className='muted';p.textContent='Belum ada skor tercatat. Jadilah pemain pertama!';node.append(p);return;}
-  d.leaders.forEach(r=>{
-   const row=document.createElement('div');row.className='leader-row';
-   const rank=document.createElement('div');rank.className='rank';rank.textContent='#'+r.rank;
-   const person=document.createElement('div');
-   const name=document.createElement('div');name.className='leader-name';name.textContent=r.nickname;
-   const region=document.createElement('div');region.className='leader-meta';region.textContent=r.region;
-   person.append(name,region);
-   const value=document.createElement('div');const points=document.createElement('div');points.className='leader-score';points.textContent=r.total_points+' poin';
-   const detail=document.createElement('div');detail.className='leader-detail';detail.textContent=r.rounds+'× main · '+r.perfect_rounds+'× sempurna';
-   value.append(points,detail);row.append(rank,person,value);node.append(row);
-  });
- }catch(e){message('leader-rows','Leaderboard belum tersedia: '+e.message);}
+  const d=await api('/api/leaderboard');
+  liveBoard=d;serverOffsetMs=d.server_now_ms-Date.now();
+  const p=d.period;
+  const from=8+(p.number-1)*3,to=from+3;
+  const phaseText=d.phase==='upcoming'?'ACARA BELUM DIMULAI · PERIODE 1':d.phase==='closed'?'PERMAINAN HADIAH SUDAH DITUTUP':'PERIODE '+p.number+' BERJALAN';
+  message('event-period-label',phaseText+' · '+String(from).padStart(2,'0')+'.00–'+String(to).padStart(2,'0')+'.00 WITA');
+  message('event-remaining',d.phase==='upcoming'?'Mulai 20 November 2026 pukul 08.00 WITA':d.phase==='active'?'Pengumuman setelah periode berakhir dan verifikasi petugas':'Hadiah utama ditutup 20 November pukul 20.00 WITA');
+  fillLeaders('leader-rows-period',p.leaders,d.phase==='upcoming'?'Peringkat periode dimulai pada 20 November pukul 08.00 WITA.':'Belum ada skor di periode ini. Ayo jadi yang pertama!');
+  fillLeaders('leader-rows-overall',d.overall.leaders,d.phase==='upcoming'?'Papan juara umum akan mulai menghitung saat acara dimulai.':'Belum ada skor juara umum.');
+  announceWinners(d.winners||[]);boardTab(boardMode);countDownTick();
+ }catch(e){
+  message('leader-rows-period','Peringkat belum tersedia: '+e.message);
+  message('leader-rows-overall','Peringkat belum tersedia: '+e.message);
+ }
 }
 async function refreshStats(){try{const d=await api('/api/stats');const node=el('issue-bars');node.replaceChildren();const topics=d.topics||[];if(!topics.length){const p=document.createElement('p');p.className='muted';p.textContent='Belum ada pilihan isu yang terkumpul.';node.append(p);return;}const max=Math.max(...topics.map(t=>t.total));topics.forEach(t=>{const row=document.createElement('div');row.className='issue-row';const lbl=document.createElement('div');lbl.className='issue-label';const name=document.createElement('span');name.textContent=t.topic;const n=document.createElement('span');n.textContent=t.total;lbl.append(name,n);const track=document.createElement('div');track.className='issue-track';const bar=document.createElement('span');bar.style.width=(100*t.total/max)+'%';track.append(bar);row.append(lbl,track);node.append(row);});}catch(e){message('issue-bars','Statistik belum tersedia.');}}
 async function submitVoice(event){event.preventDefault();const f=el('voice-form');if(!f.reportValidity())return;const fd=new FormData(f);const data={topic:fd.get('topic'),region:fd.get('region'),story:String(fd.get('story')||''),contact:String(fd.get('contact')||'').trim(),allow_contact:el('voice-consent').checked};if(data.contact&&!data.allow_contact){message('voice-status','Centang persetujuan bila mengisi kontak.');return;}const btn=el('voice-send');btn.disabled=true;message('voice-status','Mengirim…');
@@ -108,6 +156,10 @@ document.addEventListener('DOMContentLoaded',()=>{
  el('quiz-quit-feedback').addEventListener('click',quitQuiz);
  el('quiz-retry').addEventListener('click',()=>{if(retryTask)retryTask();else openQuiz();});
  el('refresh-board').addEventListener('click',refreshBoard);
+ el('board-period').addEventListener('click',()=>boardTab('period'));
+ el('board-overall').addEventListener('click',()=>boardTab('overall'));
+ setInterval(countDownTick,1000);
+ setInterval(()=>{if(activeStage==='leaderboard'&&!document.hidden)refreshBoard();},45000);
  el('voice-form').addEventListener('submit',submitVoice);
  window.addEventListener('hashchange',resumeFromHash);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('quiz-layer').classList.contains('hidden'))quitQuiz();});

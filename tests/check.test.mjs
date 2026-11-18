@@ -39,7 +39,7 @@ test('Semua pertanyaan punya 4 opsi unik, satu jawaban dan sumber HTTPS',()=>{
  }
 });
 test('Berkas aplikasi, logo resmi dan migrasi tersedia',()=>{
- for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
+ for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','migrations/0007_event_awards.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
 });
 test('Kode JavaScript lolos pemeriksaan sintaks Node.js',()=>{
  for(const file of ['src/worker.js','public/app.js','public/admin.js']){
@@ -89,4 +89,25 @@ test('Setiap bagian adalah satu layar dan ada CTA untuk Saweria serta Teras.id',
  assert.ok(css.includes('height:100dvh'));
  assert.ok(css.includes('.quiz-score-divider'));
  assert.equal(html.includes('id="quiz-close"'),false);
+});
+
+test('Enam ilustrasi editorial, urutan layar acara, hadiah, dan informasi Suara Bumi lengkap',()=>{
+ const html=read('public/index.html'),js=read('public/app.js');
+ const order=[...html.matchAll(/data-stage="([^"]+)"/g)].map(x=>x[1]);
+ assert.deepEqual(order,['intro','challenge','leaderboard','suara','dukung','jelajah']);
+ for(const key of order){
+  assert.ok(existsSync(new URL('../public/art/'+key+'.svg',import.meta.url)),key);
+  assert.ok(html.includes('/art/'+key+'.svg'));
+ }
+ assert.match(html,/Hadiah tiap 3 jam/);
+ assert.match(html,/Dashboard Admin → Suara Bumi/);
+ assert.match(html,/dipertimbangkan sebagai bahan liputan/);
+ assert.ok(js.includes("serverOffsetMs"));
+ assert.ok(js.includes("boardMode='period'"));
+ assert.match(html,/id="board-overall"/);
+ assert.match(html,/id="event-countdown"/);
+ const server=read('src/worker.js');
+ assert.ok(server.includes('EVENT_END_MS'));
+ assert.ok(server.includes("quiz_award_snapshots"));
+ assert.ok(server.includes("'/api/admin/awards/status'"));
 });

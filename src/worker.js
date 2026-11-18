@@ -19,6 +19,64 @@ async function playerFromToken(env,token){
 function sessionExpired(session){return !session||session.started_at<Date.now()-7200000||session.status!=='open';}
 function checkQuestion(data){if(!data||!['bolmong','umum'].includes(data.category)||!field(data.topic,2,60)||!field(data.question,15,280)||!Array.isArray(data.options)||data.options.length!==4||!data.options.every(a=>field(a,1,180))||new Set(data.options.map(x=>x.trim().toLowerCase())).size!==4||!Number.isInteger(data.correct_index)||data.correct_index<0||data.correct_index>3||!field(data.explanation,15,500)||!field(data.source_url,12,500))return 'Lengkapi kategori, topik, soal, empat opsi unik, indeks jawaban, pembahasan, dan URL sumber.';try{const u=new URL(data.source_url);if(u.protocol!=='https:')return 'Rujukan harus HTTPS.';}catch{return 'URL rujukan tidak valid.';}return null;}
 const csvCell=v=>{let s=String(v??'');if(/^[\s]*[=+@\-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
+
+/* Bolmong Eco Future, waktu lokal WITA (UTC+8).
+   Penanda waktu memakai timestamp SERVER dan completion time jawaban kelima. */
+const EVENT_START_MS=Date.UTC(2026,10,20,0,0,0);  // 20 Nov 08.00 WITA
+const PERIOD_MS=3*60*60*1000;
+const EVENT_END_MS=EVENT_START_MS+4*PERIOD_MS;    // 20 Nov 20.00 WITA
+const PERIODS=Array.from({length:4},(_,i)=>({index:i,start_ms:EVENT_START_MS+i*PERIOD_MS,end_ms:EVENT_START_MS+(i+1)*PERIOD_MS}));
+const scoredRows=async(env,start,end,limit=20)=>{
+ const rows=await env.DB.prepare(`SELECT p.id participant_id,p.code,p.nickname,p.region,
+    SUM(r.score)*20 total_points,COUNT(*) rounds,
+    SUM(CASE WHEN r.score=5 THEN 1 ELSE 0 END) perfect_rounds,
+    AVG(r.duration_seconds) avg_seconds,MIN(s.completed_at) first_finished
+   FROM quiz_results r JOIN quiz_sessions s ON s.id=r.session_id
+   JOIN quiz_participants p ON p.id=r.participant_id
+   WHERE s.completed_at>=? AND s.completed_at<?
+   GROUP BY p.id
+   ORDER BY total_points DESC,perfect_rounds DESC,avg_seconds ASC,first_finished ASC,p.id ASC LIMIT ?`)
+  .bind(start,end,limit).all();
+ return (rows.results||[]).map((r,i)=>({...r,rank:i+1}));
+};
+async function captureAwards(env,now){
+ for(let i=0;i<=4;i++){
+  const end=i===4?EVENT_END_MS:PERIODS[i].end_ms;
+  if(now<end)continue;
+  const previous=await env.DB.prepare('SELECT 1 found FROM quiz_award_snapshots WHERE period_index=? LIMIT 1').bind(i).first();
+  if(previous)continue;
+  const begin=i===4?EVENT_START_MS:PERIODS[i].start_ms;
+  const leaders=await scoredRows(env,begin,end,5);
+  if(!leaders.length)continue;
+  const stmt=env.DB.prepare('INSERT OR IGNORE INTO quiz_award_snapshots(period_index,rank,participant_id,player_code,nickname,region,points,rounds,perfect_rounds,avg_seconds) VALUES(?,?,?,?,?,?,?,?,?,?)');
+  await env.DB.batch(leaders.map(r=>stmt.bind(i,r.rank,r.participant_id,r.code,r.nickname,r.region,r.total_points,r.rounds,r.perfect_rounds,r.avg_seconds)));
+ }
+}
+export async function eventLeaderboard(env,now=Date.now()){
+ await captureAwards(env,now);
+ const phase=now<EVENT_START_MS?'upcoming':now>=EVENT_END_MS?'closed':'active';
+ const i=phase==='upcoming'?0:phase==='closed'?3:Math.min(3,Math.floor((now-EVENT_START_MS)/PERIOD_MS));
+ const current=PERIODS[i];
+ const [periodLeaders,overallLeaders,snapshots]=await Promise.all([
+  scoredRows(env,current.start_ms,Math.min(current.end_ms,now),20),
+  scoredRows(env,EVENT_START_MS,Math.min(EVENT_END_MS,now),20),
+  env.DB.prepare('SELECT period_index,rank,player_code code,nickname,region,points,rounds,perfect_rounds,avg_seconds,status,captured_at,verified_at FROM quiz_award_snapshots ORDER BY period_index,rank').all()
+ ]);
+ const awards=snapshots.results||[];
+ const winners=[];
+ for(let p=0;p<=4;p++){
+  const arr=awards.filter(x=>x.period_index===p&&x.status!=='disqualified');
+  const winner=arr.find(x=>x.status==='confirmed')||arr[0];
+  if(winner)winners.push({...winner,period:p===4?'umum':p+1});
+ }
+ return {ok:true,server_now_ms:now,phase,event_start_ms:EVENT_START_MS,event_end_ms:EVENT_END_MS,
+  schedule:PERIODS,
+  period:{number:i+1,...current,phase,leaders:periodLeaders,remaining_seconds:Math.max(0,Math.ceil(((phase==='upcoming'?EVENT_START_MS:current.end_ms)-now)/1000))},
+  overall:{leaders:overallLeaders,end_ms:EVENT_END_MS},
+  winners,leaders:overallLeaders,
+  notice:'Periode memakai poin jawaban kelima yang selesai pada rentang waktu. Juara sementara perlu diverifikasi di stan sebelum hadiah diberikan.'};
+}
+
 export async function handleApi(request,env,path){
  if(path==='/api/health'&&request.method==='GET')return J({ok:true,db:!!env.DB});
  if(!env.DB)return err('D1 belum terhubung.',503);
@@ -54,8 +112,7 @@ export async function handleApi(request,env,path){
   return J({ok:true,players:players?.n||0,voices:voices?.n||0,topics:topics.results||[],questions:qs.results||[]});
  }
  if(path==='/api/leaderboard'&&request.method==='GET'){
-  const rows=await env.DB.prepare("SELECT COALESCE(p.nickname,r.nickname) nickname,COALESCE(p.region,r.region) region, SUM(r.score)*20 total_points,COUNT(*) rounds,SUM(CASE WHEN r.score=5 THEN 1 ELSE 0 END) perfect_rounds,MAX(r.score)*20 best_points,ROUND(AVG(r.duration_seconds),1) avg_seconds,MIN(r.created_at) first_play FROM quiz_results r LEFT JOIN quiz_participants p ON r.participant_id=p.id GROUP BY COALESCE(r.participant_id,'legacy-'||r.session_id) ORDER BY total_points DESC,perfect_rounds DESC,avg_seconds ASC,first_play ASC LIMIT 20").all();
-  return J({ok:true,leaders:(rows.results||[]).map((r,i)=>({...r,rank:i+1})),notice:'Poin = jumlah jawaban benar x 20 dari semua permainan. Jika poin sama, lebih banyak putaran sempurna diutamakan, lalu rata-rata waktu menjawab paling cepat. Identitas untuk hadiah perlu dicek petugas.'});
+  return J(await eventLeaderboard(env));
  }
  if(path==='/api/quiz/start'&&request.method==='POST'){
   const b=await body(request,6000);
@@ -93,7 +150,14 @@ export async function handleApi(request,env,path){
   await env.DB.prepare("UPDATE quiz_sessions SET status='done' WHERE id=?").bind(sess.id).run();
   const rec=await env.DB.prepare('SELECT nickname,score,duration_seconds FROM quiz_results WHERE session_id=?').bind(sess.id).first();
   const best=await env.DB.prepare("SELECT MAX(score)*20 best_points,SUM(score)*20 total_points,COUNT(*) rounds,SUM(CASE WHEN score=5 THEN 1 ELSE 0 END) perfect_rounds FROM quiz_results WHERE participant_id=?").bind(player.id).first();
-  return J({ok:true,score:rec.score,points:rec.score*20,max_points:100,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_points:best.best_points,total_points:best.total_points,rounds:best.rounds,perfect_rounds:best.perfect_rounds});
+  const finishMs=sess.completed_at||Date.now();
+  const eventEligible=finishMs>=EVENT_START_MS&&finishMs<EVENT_END_MS;
+  const periodIndex=eventEligible?Math.floor((finishMs-EVENT_START_MS)/PERIOD_MS):-1;
+  const [allEvent,withinPeriod]=await Promise.all([
+   env.DB.prepare('SELECT COALESCE(SUM(r.score)*20,0) n FROM quiz_results r JOIN quiz_sessions s ON s.id=r.session_id WHERE r.participant_id=? AND s.completed_at>=? AND s.completed_at<?').bind(player.id,EVENT_START_MS,EVENT_END_MS).first(),
+   eventEligible?env.DB.prepare('SELECT COALESCE(SUM(r.score)*20,0) n FROM quiz_results r JOIN quiz_sessions s ON s.id=r.session_id WHERE r.participant_id=? AND s.completed_at>=? AND s.completed_at<?').bind(player.id,EVENT_START_MS+periodIndex*PERIOD_MS,EVENT_START_MS+(periodIndex+1)*PERIOD_MS).first():Promise.resolve({n:0})
+  ]);
+  return J({ok:true,score:rec.score,points:rec.score*20,max_points:100,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_points:best.best_points,total_points:best.total_points,rounds:best.rounds,perfect_rounds:best.perfect_rounds,counts_for_prize:eventEligible,period_index:periodIndex,period_points:withinPeriod.n,event_total_points:allEvent.n});
  }
  if(path==='/api/voice'&&request.method==='POST'){
   const b=await body(request);
@@ -107,6 +171,25 @@ export async function handleApi(request,env,path){
  }
  if(path.startsWith('/api/admin/')){
   if(!auth(request,env))return err('Akses admin ditolak.',401);
+  if(path==='/api/admin/awards'&&request.method==='GET'){
+   await captureAwards(env,Date.now());
+   const awards=await env.DB.prepare('SELECT a.*,p.verified participant_verified FROM quiz_award_snapshots a LEFT JOIN quiz_participants p ON p.id=a.participant_id ORDER BY a.period_index,a.rank').all();
+   return J({ok:true,awards:awards.results||[],event_start_ms:EVENT_START_MS,event_end_ms:EVENT_END_MS,schedule:PERIODS});
+  }
+  if(path==='/api/admin/awards/status'&&request.method==='POST'){
+   const b=await body(request,2000);
+   if(!Number.isInteger(b?.period_index)||b.period_index<0||b.period_index>4||!Number.isInteger(b.rank)||b.rank<1||b.rank>5||!['pending','confirmed','disqualified'].includes(b.status))return err('Status juara tidak valid.');
+   const current=await env.DB.prepare('SELECT * FROM quiz_award_snapshots WHERE period_index=? AND rank=?').bind(b.period_index,b.rank).first();
+   if(!current)return err('Daftar juara periode belum tersedia.',404);
+   if(b.status==='confirmed'){
+    const participant=await env.DB.prepare('SELECT verified FROM quiz_participants WHERE id=?').bind(current.participant_id).first();
+    if(!participant?.verified)return err('Kode peserta harus diverifikasi di stan sebelum pemenang dikonfirmasi.',409);
+    const conflict=await env.DB.prepare("SELECT rank FROM quiz_award_snapshots WHERE period_index=? AND status='confirmed' AND rank<>? LIMIT 1").bind(b.period_index,b.rank).first();
+    if(conflict)return err('Sudah ada juara terkonfirmasi untuk periode ini. Ubah status sebelumnya dahulu.',409);
+   }
+   await env.DB.prepare("UPDATE quiz_award_snapshots SET status=?,verified_at=CASE WHEN ?='confirmed' THEN datetime('now') ELSE NULL END WHERE period_index=? AND rank=?").bind(b.status,b.status,b.period_index,b.rank).run();
+   return J({ok:true});
+  }
   if(path==='/api/admin/participants'&&request.method==='GET'){
    const rows=await env.DB.prepare("SELECT p.id,p.code,p.nickname,p.region,p.verified,p.verified_at,p.created_at,COALESCE(SUM(r.score)*20,0) total_points,COALESCE(MAX(r.score)*20,0) best_points,COUNT(r.id) plays,COALESCE(SUM(CASE WHEN r.score=5 THEN 1 ELSE 0 END),0) perfect_rounds,ROUND(AVG(r.duration_seconds),1) avg_seconds FROM quiz_participants p LEFT JOIN quiz_results r ON r.participant_id=p.id GROUP BY p.id ORDER BY total_points DESC,perfect_rounds DESC,avg_seconds ASC,p.created_at ASC LIMIT 500").all();
    return J({ok:true,participants:rows.results||[]});

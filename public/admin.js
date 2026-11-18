@@ -46,9 +46,39 @@ async function loadParticipants(){
   card.append(label);list.append(card);
  });
 }
-function setTab(tab){document.querySelectorAll('.tab').forEach(btn=>{btn.classList.toggle('active',btn.dataset.tab===tab);});$('panel-questions').classList.toggle('hidden',tab!=='questions');$('panel-voices').classList.toggle('hidden',tab!=='voices');$('panel-participants').classList.toggle('hidden',tab!=='participants');if(tab==='voices')loadVoices().catch(e=>note(e.message));if(tab==='participants')loadParticipants().catch(e=>note(e.message));}
+async function loadAwards(){
+ const response=await request('/api/admin/awards');const data=await response.json();
+ const root=$('award-list');root.replaceChildren();
+ const byPeriod=i=>(data.awards||[]).filter(r=>r.period_index===i);
+ for(let i=0;i<=4;i++){
+  const section=document.createElement('section');section.className='admin-card';
+  section.append(text('h3',i===4?'🏆 JUARA UMUM · Ditutup 20.00 WITA':'🏅 PERIODE '+(i+1)+' · '+String(8+3*i).padStart(2,'0')+'.00–'+String(11+3*i).padStart(2,'0')+'.00 WITA'));
+  const records=byPeriod(i);
+  if(!records.length){section.append(text('p','Belum ada kandidat tersimpan. Daftar muncul saat periode berakhir dan terdapat pemain.','muted'));root.append(section);continue;}
+  for(const r of records){
+   const article=document.createElement('div');article.className='award-row';
+   article.append(text('p','#'+r.rank+' · '+r.player_code+' · '+r.nickname+' · '+r.region,'micro'));
+   article.append(text('p',r.points+' poin · '+r.rounds+' putaran · '+r.perfect_rounds+' sempurna · rata-rata '+Number(r.avg_seconds).toFixed(1)+' detik'));
+   const status=text('p','Status: '+(r.status==='confirmed'?'JUARA RESMI':r.status==='disqualified'?'DIDISKUALIFIKASI':'MENUNGGU VERIFIKASI')+' · Pemain '+(r.participant_verified?'sudah':'belum')+' diperiksa di stan.','muted');article.append(status);
+   const row=document.createElement('div');row.className='actions';
+   for(const [label,value] of [['Konfirmasi juara','confirmed'],['Diskualifikasi','disqualified'],['Batalkan status','pending']]){
+    const btn=document.createElement('button');btn.className='btn '+(value==='confirmed'?'primary':'outline');btn.type='button';btn.textContent=label;
+    btn.disabled=r.status===value||(value==='confirmed'&&!r.participant_verified);
+    btn.addEventListener('click',async()=>{
+     if(value==='confirmed'&&!window.confirm('Konfirmasi '+r.nickname+' sebagai juara resmi? Pastikan kode peserta dan identitas sudah diperiksa di stan.'))return;
+     btn.disabled=true;
+     try{await request('/api/admin/awards/status',{period_index:i,rank:r.rank,status:value});note('Status kandidat tersimpan.');await loadAwards();}
+     catch(e){note('Gagal memperbarui juara: '+e.message);btn.disabled=false;}
+    });row.append(btn);
+   }
+   article.append(row);section.append(article);
+  }
+  root.append(section);
+ }
+}
+function setTab(tab){document.querySelectorAll('.tab').forEach(btn=>{btn.classList.toggle('active',btn.dataset.tab===tab);});$('panel-questions').classList.toggle('hidden',tab!=='questions');$('panel-voices').classList.toggle('hidden',tab!=='voices');$('panel-participants').classList.toggle('hidden',tab!=='participants');$('panel-awards').classList.toggle('hidden',tab!=='awards');if(tab==='voices')loadVoices().catch(e=>note(e.message));if(tab==='participants')loadParticipants().catch(e=>note(e.message));if(tab==='awards')loadAwards().catch(e=>note(e.message));}
 async function downloadCsv(){try{const r=await request('/api/admin/export');const blob=await r.blob();const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='suara-bumi.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);note('CSV berhasil diunduh. Simpan dengan aman.');}catch(e){note(e.message);}}
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('secret').value.trim();$('secret').value='';try{await loadQuestions();$('login-form').classList.add('hidden');$('admin-area').classList.remove('hidden');note('Dashboard siap digunakan.');}catch(e){token='';note('Login gagal: '+e.message);}});
-$('question-form').addEventListener('submit',saveQuestion);$('q-reset').addEventListener('click',resetEdit);$('q-search').addEventListener('input',renderQuestions);$('import-submit').addEventListener('click',bulkImport);$('export-csv').addEventListener('click',downloadCsv);$('refresh-participants').addEventListener('click',()=>loadParticipants().catch(e=>note(e.message)));
+$('question-form').addEventListener('submit',saveQuestion);$('q-reset').addEventListener('click',resetEdit);$('q-search').addEventListener('input',renderQuestions);$('import-submit').addEventListener('click',bulkImport);$('export-csv').addEventListener('click',downloadCsv);$('refresh-participants').addEventListener('click',()=>loadParticipants().catch(e=>note(e.message)));$('refresh-awards').addEventListener('click',()=>loadAwards().catch(e=>note(e.message)));
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>setTab(btn.dataset.tab)));
 $('logout').addEventListener('click',()=>{token='';questions=[];voices=[];document.querySelectorAll('input').forEach(x=>{if(x.type==='password')x.value='';});$('admin-area').classList.add('hidden');$('login-form').classList.remove('hidden');note('Sesi dashboard ditutup.');});
