@@ -150,7 +150,14 @@ export async function handleApi(request,env,path){
   await env.DB.prepare("UPDATE quiz_sessions SET status='done' WHERE id=?").bind(sess.id).run();
   const rec=await env.DB.prepare('SELECT nickname,score,duration_seconds FROM quiz_results WHERE session_id=?').bind(sess.id).first();
   const best=await env.DB.prepare("SELECT MAX(score)*20 best_points,SUM(score)*20 total_points,COUNT(*) rounds,SUM(CASE WHEN score=5 THEN 1 ELSE 0 END) perfect_rounds FROM quiz_results WHERE participant_id=?").bind(player.id).first();
-  return J({ok:true,score:rec.score,points:rec.score*20,max_points:100,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_points:best.best_points,total_points:best.total_points,rounds:best.rounds,perfect_rounds:best.perfect_rounds});
+  const finishMs=sess.completed_at||Date.now();
+  const eventEligible=finishMs>=EVENT_START_MS&&finishMs<EVENT_END_MS;
+  const periodIndex=eventEligible?Math.floor((finishMs-EVENT_START_MS)/PERIOD_MS):-1;
+  const [allEvent,withinPeriod]=await Promise.all([
+   env.DB.prepare('SELECT COALESCE(SUM(r.score)*20,0) n FROM quiz_results r JOIN quiz_sessions s ON s.id=r.session_id WHERE r.participant_id=? AND s.completed_at>=? AND s.completed_at<?').bind(player.id,EVENT_START_MS,EVENT_END_MS).first(),
+   eventEligible?env.DB.prepare('SELECT COALESCE(SUM(r.score)*20,0) n FROM quiz_results r JOIN quiz_sessions s ON s.id=r.session_id WHERE r.participant_id=? AND s.completed_at>=? AND s.completed_at<?').bind(player.id,EVENT_START_MS+periodIndex*PERIOD_MS,EVENT_START_MS+(periodIndex+1)*PERIOD_MS).first():Promise.resolve({n:0})
+  ]);
+  return J({ok:true,score:rec.score,points:rec.score*20,max_points:100,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_points:best.best_points,total_points:best.total_points,rounds:best.rounds,perfect_rounds:best.perfect_rounds,counts_for_prize:eventEligible,period_index:periodIndex,period_points:withinPeriod.n,event_total_points:allEvent.n});
  }
  if(path==='/api/voice'&&request.method==='POST'){
   const b=await body(request);
@@ -175,6 +182,8 @@ export async function handleApi(request,env,path){
    const current=await env.DB.prepare('SELECT * FROM quiz_award_snapshots WHERE period_index=? AND rank=?').bind(b.period_index,b.rank).first();
    if(!current)return err('Daftar juara periode belum tersedia.',404);
    if(b.status==='confirmed'){
+    const participant=await env.DB.prepare('SELECT verified FROM quiz_participants WHERE id=?').bind(current.participant_id).first();
+    if(!participant?.verified)return err('Kode peserta harus diverifikasi di stan sebelum pemenang dikonfirmasi.',409);
     const conflict=await env.DB.prepare("SELECT rank FROM quiz_award_snapshots WHERE period_index=? AND status='confirmed' AND rank<>? LIMIT 1").bind(b.period_index,b.rank).first();
     if(conflict)return err('Sudah ada juara terkonfirmasi untuk periode ini. Ubah status sebelumnya dahulu.',409);
    }
