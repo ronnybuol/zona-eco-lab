@@ -52,7 +52,7 @@ async function captureAwards(env,now){
   await env.DB.batch(leaders.map(r=>stmt.bind(i,r.rank,r.participant_id,r.code,r.nickname,r.region,r.total_points,r.rounds,r.perfect_rounds,r.avg_seconds)));
  }
 }
-async function eventLeaderboard(env,now=Date.now()){
+export async function eventLeaderboard(env,now=Date.now()){
  await captureAwards(env,now);
  const phase=now<EVENT_START_MS?'upcoming':now>=EVENT_END_MS?'closed':'active';
  const i=phase==='upcoming'?0:phase==='closed'?3:Math.min(3,Math.floor((now-EVENT_START_MS)/PERIOD_MS));
