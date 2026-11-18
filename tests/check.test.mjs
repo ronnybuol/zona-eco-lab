@@ -135,3 +135,22 @@ test('Nama atau panggilan pengirim Suara Bumi ada di UI, API, admin, dan migrasi
  assert.ok(admin.includes('Pengirim: '));
  assert.match(read('migrations/0008_voice_contributor_name.sql'),/ALTER TABLE voices ADD COLUMN contributor_name/);
 });
+
+test('Final visual: enam hero scene penuh, hadiah utama, CTA dan logo resmi',()=>{
+ const html=read('public/index.html'),css=read('public/style.css'),js=read('public/app.js');
+ const order=[...html.matchAll(/data-stage="([^"]+)"/g)].map(m=>m[1]);
+ assert.deepEqual(order,['intro','challenge','leaderboard','suara','dukung','jelajah']);
+ assert.equal((html.match(/class="art-scene art-scene-/g)||[]).length,6);
+ assert.equal((html.match(/preserveAspectRatio="xMidYMid slice"/g)||[]).length,6);
+ assert.equal((html.match(/src="\/logo-zonautara\.png"/g)||[]).length,1);
+ assert.ok(html.includes('Hadiah Periode')||html.includes('HADIAH PERIODE'));
+ assert.ok(html.includes('HADIAH UTAMA'));
+ assert.ok(html.includes('Jurnalisme publik'));
+ assert.ok(html.includes('Bisa menang')||html.includes('Rebut hadiah'));
+ assert.ok(html.includes('v=20261118c'));
+ assert.ok(js.includes('document.body.dataset.stage=n'));
+ assert.ok(js.includes("challenge:'Main sekarang & rebut hadiah →'"));
+ assert.match(css,/\.art-scene\s*svg\.stage-art/);
+ assert.match(css,/@media\(max-width:430px\)/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+});
