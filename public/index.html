@@ -23,30 +23,13 @@
 <section id="game" class="feature" aria-labelledby="game-title">
 <div class="section-top"><p class="eyebrow dark">01 / MAIN</p><span class="pill">2 SOAL BOLMONG + 3 UMUM</span></div>
 <h2 id="game-title">Tantangan Bumi</h2>
-<p class="intro">Main dari HP tanpa login. Jawaban dan pembahasan akan muncul satu per satu. Main ulang? Soalnya berganti!</p>
-<p id="game-status" role="status" class="muted">Memuat aplikasi…</p>
-<div id="game-intro" class="game-panel">
-<div class="game-start"><div class="game-symbol" aria-hidden="true">✳</div><h3>Siap uji pengetahuanmu?</h3><p>Lima soal acak tentang lingkungan dan Bolaang Mongondow. Sumber berita dan penjelasan tersedia setelah menjawab.</p>
-<button id="start-game" class="btn primary full" type="button">Mulai main sekarang ↗</button></div>
-</div>
-<div id="game-question" class="game-panel hidden" tabindex="-1" aria-label="Pertanyaan kuis">
-<div class="row-between"><span id="q-progress" class="micro">PERTANYAAN 1 / 5</span><span id="q-category" class="pill">BOLMONG</span></div>
-<div class="progress" aria-hidden="true"><span id="q-progress-bar"></span></div>
-<p id="q-topic" class="eyebrow dark"></p><h3 id="q-title"></h3><div id="q-options" class="options" role="group" aria-label="Pilihan jawaban"></div>
-<div id="q-feedback" class="feedback hidden" role="status"></div>
-<button id="q-next" class="btn primary full hidden" type="button">Pertanyaan berikutnya →</button>
-<p class="scroll-hint">↓ Jika konten belum seluruhnya terlihat, geser halaman ke bawah.</p>
-</div>
-<div id="game-result" class="game-panel hidden" tabindex="-1">
-<div class="result-badge">✺ PERMAINAN SELESAI</div><p class="eyebrow dark">SKOR TANTANGAN BUMI</p>
-<div class="score-number"><span id="result-score">0</span><small>/5</small></div>
-<h3 id="result-title">Sahabat Bumi</h3><p id="result-info"></p>
-<form id="result-form" class="mini-form"><label for="player-name">Nama panggilan untuk leaderboard</label><input id="player-name" type="text" maxlength="24" minlength="2" placeholder="Contoh: Sahabat Lolak" autocomplete="nickname" required>
-<label for="player-region">Asal wilayah</label><select id="player-region"><option value="Kabupaten Bolaang Mongondow">Bolaang Mongondow</option><option value="Kota Kotamobagu">Kotamobagu</option><option value="Kabupaten Bolaang Mongondow Timur">Bolmong Timur</option><option value="Kabupaten Bolaang Mongondow Selatan">Bolmong Selatan</option><option value="Kabupaten Bolaang Mongondow Utara">Bolmong Utara</option><option value="Wilayah lain / tidak disebutkan">Lainnya</option></select>
-<label class="check"><input id="player-consent" type="checkbox" required><span>Saya setuju nama panggilan, skor dan asal wilayah tampil di leaderboard publik.</span></label>
-<button id="save-score" class="btn primary full" type="submit">Simpan skor ke leaderboard ↗</button></form>
-<p id="save-status" role="status" class="muted"></p>
-<div class="actions narrow"><button id="share-score" class="btn outline" type="button">Bagikan hasil</button><button id="replay-game" class="btn quiet" type="button">Main lagi ↻</button></div>
+<p class="intro">Lima soal acak tentang lingkungan dan kehidupan di Bolmong. Tanpa instalasi, tanpa login, cukup satu profil pemain di HP ini.</p>
+<div class="game-panel game-entry">
+<div class="game-symbol" aria-hidden="true">✳</div>
+<h3>Berani tantangan 60 detik?</h3>
+<p class="muted">Sekali mulai, seluruh permainan berlangsung dalam tampilan layar penuh. Tidak perlu mencari tombol dengan menggulir halaman panjang.</p>
+<button id="start-game" class="btn primary full" type="button">Mulai Tantangan Bumi ↗</button>
+<p id="game-status" class="muted small" role="status">Satu soal per layar · 5 pertanyaan · Bisa main ulang</p>
 </div>
 </section>
 <section id="leaderboard" class="feature board-feature" aria-labelledby="leader-title">
@@ -69,4 +52,74 @@
 </section>
 </div></main>
 <footer class="footer"><div class="wrap footer-inner"><img src="/logo-zonautara.png" alt="Zonautara.com"><p>Zona Eco Lab · Bolmong Eco Future 2026</p><p><a href="/admin.html">Petugas</a> · <a href="https://zonautara.com" target="_blank" rel="noopener">Berita Zonautara ↗</a></p></div></footer>
+<div id="quiz-layer" class="quiz-layer hidden" role="dialog" aria-modal="true" aria-label="Permainan Tantangan Bumi">
+ <header class="quiz-topbar">
+  <span class="quiz-brand">✳ ZONA ECO LAB</span>
+  <button id="quiz-close" class="quiz-close" type="button" aria-label="Tutup permainan">Tutup <span aria-hidden="true">✕</span></button>
+ </header>
+ <div class="quiz-meter">
+  <div class="quiz-meter-line"><strong id="quiz-phase">TANTANGAN BUMI</strong><span id="quiz-step-label">5 pertanyaan</span></div>
+  <div class="quiz-track" aria-hidden="true"><span id="quiz-progress-bar"></span></div>
+ </div>
+ <section id="quiz-loading" class="quiz-screen">
+  <div class="quiz-scroll quiz-centered" role="status"><div class="quiz-big-mark" aria-hidden="true">✳</div><h2>Menyiapkan tantangan…</h2><p>Memilih pertanyaan acak untukmu.</p></div>
+ </section>
+ <section id="quiz-profile" class="quiz-screen hidden" aria-labelledby="quiz-profile-title">
+  <div class="quiz-scroll">
+   <p class="quiz-kicker">DAFTAR SEKALI SAJA</p><h2 id="quiz-profile-title">Siapa nama panggilanmu?</h2>
+   <p class="quiz-desc">Nama ini akan digunakan setiap kali kamu bermain dari browser ini. Pilih nama yang mudah diingat.</p>
+   <form id="quiz-profile-form" class="quiz-form">
+    <label for="quiz-nickname">Nama panggilan</label>
+    <input id="quiz-nickname" maxlength="24" minlength="2" required autocomplete="nickname" placeholder="Contoh: Penjaga Lolak">
+    <label for="quiz-region">Asal wilayah</label>
+    <select id="quiz-region" required>
+      <option value="Kabupaten Bolaang Mongondow">Bolaang Mongondow</option><option value="Kota Kotamobagu">Kotamobagu</option>
+      <option value="Kabupaten Bolaang Mongondow Timur">Bolmong Timur</option><option value="Kabupaten Bolaang Mongondow Selatan">Bolmong Selatan</option>
+      <option value="Kabupaten Bolaang Mongondow Utara">Bolmong Utara</option><option value="Wilayah lain / tidak disebutkan">Lainnya</option>
+    </select>
+    <label class="check"><input id="quiz-consent" type="checkbox" required><span>Setuju nama panggilan, wilayah, dan skor terbaik tampil di leaderboard.</span></label>
+   </form>
+   <p class="quiz-note">Tidak perlu nomor HP. Profil disimpan di perangkat ini; kode peserta ditampilkan setelah bermain. Kode dapat dipakai petugas sebagai salah satu alat bantu verifikasi hadiah.</p>
+   <p id="quiz-profile-status" class="quiz-error-text" role="status"></p>
+  </div>
+  <div class="quiz-bottom"><button id="quiz-register" form="quiz-profile-form" class="quiz-main-btn" type="submit">Lanjut ke permainan →</button></div>
+ </section>
+ <section id="quiz-question" class="quiz-screen hidden" aria-labelledby="quiz-question-title">
+  <div class="quiz-scroll">
+    <div class="quiz-question-head"><span id="quiz-topic" class="quiz-kicker"></span><span id="quiz-category" class="quiz-tag"></span></div>
+    <h2 id="quiz-question-title" class="quiz-question-title"></h2>
+    <div id="quiz-options" class="quiz-options" role="group" aria-label="Pilih satu jawaban"></div>
+    <p id="quiz-answer-status" class="quiz-error-text" role="status"></p>
+  </div>
+  <div class="quiz-bottom quiz-bottom-hint"><span><span aria-hidden="true">↑</span> Pilih satu jawaban untuk melanjutkan</span></div>
+ </section>
+ <section id="quiz-feedback" class="quiz-screen hidden" aria-labelledby="quiz-feedback-title">
+  <div class="quiz-scroll">
+    <p id="quiz-feedback-status" class="quiz-kicker"></p><div id="quiz-feedback-symbol" class="quiz-big-mark" aria-hidden="true">✓</div>
+    <h2 id="quiz-feedback-title" class="quiz-feedback-title"></h2>
+    <p class="quiz-answer-label">Jawaban yang tepat</p><p id="quiz-correct-answer" class="quiz-correct-answer"></p>
+    <p id="quiz-explanation" class="quiz-explanation"></p>
+    <a id="quiz-reference" class="quiz-reference" target="_blank" rel="noopener noreferrer">Baca penjelasan lebih lanjut ↗</a>
+  </div>
+  <div class="quiz-bottom"><button id="quiz-next" class="quiz-main-btn" type="button">Pertanyaan berikutnya →</button></div>
+ </section>
+ <section id="quiz-result" class="quiz-screen hidden" aria-labelledby="quiz-result-title">
+  <div class="quiz-scroll">
+    <p class="quiz-kicker">TANTANGAN SELESAI</p><div class="quiz-score-number"><span id="quiz-result-score">0</span><small>/5</small></div>
+    <h2 id="quiz-result-title"></h2><p id="quiz-result-summary"></p>
+    <div class="quiz-result-card">
+      <p class="quiz-answer-label">PROFIL PESERTA</p><strong id="quiz-result-name"></strong>
+      <p class="quiz-result-code-label">Kode peserta (simpan jika ada hadiah)</p><strong id="quiz-result-code" class="quiz-result-code"></strong>
+      <p id="quiz-result-best" class="quiz-note"></p>
+    </div>
+    <p class="quiz-note">Hanya skor terbaik profil ini yang masuk leaderboard. Kode peserta tidak membuktikan identitas; jika ada hadiah, petugas perlu memverifikasi peserta secara langsung.</p>
+    <p id="quiz-result-status" class="quiz-error-text" role="status"></p>
+  </div>
+  <div class="quiz-bottom quiz-bottom-double"><button id="quiz-replay" class="quiz-main-btn" type="button">Main lagi ↻</button><button id="quiz-share" class="quiz-secondary-btn" type="button">Bagikan</button></div>
+ </section>
+ <section id="quiz-error" class="quiz-screen hidden">
+  <div class="quiz-scroll quiz-centered"><div class="quiz-big-mark" aria-hidden="true">!</div><h2>Ada kendala</h2><p id="quiz-error-message"></p></div>
+  <div class="quiz-bottom"><button id="quiz-retry" class="quiz-main-btn" type="button">Coba lagi →</button></div>
+ </section>
+</div>
 </body></html>
