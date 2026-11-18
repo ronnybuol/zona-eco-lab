@@ -100,6 +100,17 @@ export async function handleApi(request,env,path){
  }
  if(path.startsWith('/api/admin/')){
   if(!auth(request,env))return err('Akses admin ditolak.',401);
+  if(path==='/api/admin/participants'&&request.method==='GET'){
+   const rows=await env.DB.prepare("SELECT p.id,p.code,p.nickname,p.region,p.verified,p.verified_at,p.created_at,(SELECT score FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_score,(SELECT duration_seconds FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_seconds,(SELECT COUNT(*) FROM quiz_results r WHERE r.participant_id=p.id) plays FROM quiz_participants p ORDER BY best_score DESC,best_seconds ASC,p.created_at ASC LIMIT 500").all();
+   return J({ok:true,participants:rows.results||[]});
+  }
+  if(path==='/api/admin/participants/verify'&&request.method==='POST'){
+   const b=await body(request,3000);
+   if(typeof b?.id!=='string'||!/^[0-9a-f-]{36}$/.test(b.id)||typeof b.verified!=='boolean')return err('Data verifikasi tidak valid.');
+   const result=await env.DB.prepare("UPDATE quiz_participants SET verified=?,verified_at=CASE WHEN ?=1 THEN datetime('now') ELSE NULL END WHERE id=?").bind(b.verified?1:0,b.verified?1:0,b.id).run();
+   if(!result.meta?.changes)return err('Peserta tidak ditemukan.',404);
+   return J({ok:true});
+  }
   if(path==='/api/admin/voices'&&request.method==='GET'){
    const rows=await env.DB.prepare('SELECT * FROM voices ORDER BY id DESC LIMIT 500').all();return J({ok:true,records:rows.results||[]});
   }
