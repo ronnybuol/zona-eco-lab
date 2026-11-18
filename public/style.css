@@ -67,3 +67,104 @@ body.quiz-open{overflow:hidden;touch-action:pan-y}
  .quiz-score-number{font-size:77px}
 }
 @media(max-height:600px){.quiz-meter{padding-top:6px;padding-bottom:6px}.quiz-scroll{padding-top:11px}.quiz-choice{min-height:48px;padding:8px 12px}.quiz-options{gap:6px}.quiz-question-title{font-size:22px!important;margin-bottom:13px!important}}
+
+
+/* 2026 Eco Future: full-height kiosk journey for every screen */
+html:has(body.kiosk-mode){overflow:hidden;scroll-padding-top:0}
+body.kiosk-mode{height:100vh;height:100dvh;overflow:hidden;background:#fffaf5;color:#231923;font-family:Arial,Helvetica,sans-serif}
+body.kiosk-mode.quiz-open{overflow:hidden}
+.kiosk-shell{display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;overflow:hidden}
+.kiosk-header{flex:none;height:69px;display:flex;align-items:center;justify-content:space-between;padding:10px clamp(16px,3vw,42px);gap:16px;background:#fff;border-bottom:1px solid #e7d7dd}
+.kiosk-logo{display:flex;align-items:center;min-width:0}.kiosk-logo img{display:block;width:min(49vw,218px);max-height:47px;object-fit:contain;object-position:left}
+.kiosk-step{display:flex;align-items:center;gap:9px;color:#7d1430;font-size:12px;font-weight:950;letter-spacing:.06em;white-space:nowrap}
+.kiosk-step-dot{font-size:20px;color:#a51c3a}
+.kiosk-main{flex:1;min-height:0;position:relative;overflow:hidden;background:#fffaf5}
+.kiosk-stage{height:100%;width:100%;display:none;flex-direction:column;min-height:0;overflow:hidden}
+.kiosk-stage.is-active{display:flex}
+.stage-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;padding:clamp(24px,4.3vh,50px) max(19px,calc((100% - 820px)/2)) 30px}
+.stage-scroll>*,.stage-center>*{max-width:750px;margin-left:auto;margin-right:auto}
+.stage-center{display:flex;flex-direction:column;justify-content:center;align-items:stretch}
+.stage-kicker{color:#8b1731;font-size:12px;font-weight:900;letter-spacing:.12em;line-height:1.35;margin:0 0 14px}
+.stage-hero{font-size:clamp(56px,11vw,112px);line-height:.88;letter-spacing:-.075em;font-weight:950;margin:6px auto 19px;width:100%;color:#66112b}
+.stage-hero span{color:#d39b14}.stage-hero .stage-dot{color:#78102d}
+.stage-lead{font-size:clamp(21px,4.1vw,32px);font-weight:900;line-height:1.28;margin:5px auto 15px;width:100%}
+.stage-heading{font-size:clamp(35px,6.7vw,66px);font-weight:950;letter-spacing:-.053em;line-height:1.08;margin:0 auto 16px;width:100%;color:#351824}
+.stage-copy{font-size:clamp(17px,2.5vw,20px);line-height:1.56;color:#50474b;margin:0 auto 18px;width:100%}
+.stage-copy strong{color:#68122b}
+.intro-mark,.challenge-illustration,.support-mark{font-size:80px;line-height:1.1;margin:0 auto 17px;width:100%;color:#af314c}
+.challenge-illustration{font-size:74px;background:#f7e8df;border-radius:30px;width:102px;height:102px;display:flex;align-items:center;justify-content:center;margin-left:0}
+.support-mark{font-size:58px;color:#8b1832;background:#fbe5e6;width:90px;height:90px;border-radius:50%;display:grid;place-items:center;margin-left:0}
+.stage-mini-info,.feature-tags{display:flex;flex-wrap:wrap;gap:9px;margin:14px auto 5px;width:100%}
+.stage-mini-info span,.feature-tags span{border-radius:30px;background:#f0e7e5;color:#762d3e;font-size:12px;font-weight:850;padding:8px 12px}
+.stage-text-button{background:none;border:0;color:#7d1b36;font-weight:850;font-size:14px;padding:10px 0;text-decoration:underline;text-underline-offset:3px;text-align:left;cursor:pointer;width:fit-content;margin:12px auto 0 0}
+.kiosk-footer{flex:none;display:grid;grid-template-columns:51px minmax(0,1fr);gap:11px;padding:12px max(17px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(17px,env(safe-area-inset-left));border-top:1px solid #e5d9dd;background:#fff;box-shadow:0 -4px 14px rgba(63,20,34,.04)}
+.kiosk-back{display:grid;place-items:center;min-height:52px;border-radius:10px;background:#f7edef;border:1px solid #dfc8d0;color:#791b39;font-size:23px;font-weight:900}
+.kiosk-forward{min-height:52px;border-radius:10px;background:#791830;border:0;color:#fff;font-size:16px;font-weight:900;padding:11px 16px;line-height:1.3;text-align:center}
+.kiosk-forward:disabled,.kiosk-back:disabled{opacity:.45}
+.kiosk-link-cards{display:grid;gap:13px;margin:18px auto 7px;width:100%}
+.kiosk-link-card{display:grid;grid-template-columns:49px minmax(0,1fr) 22px;align-items:center;gap:12px;background:#f1eae6;border:1px solid #e6d8d4;border-radius:14px;padding:17px;text-decoration:none;min-height:100px;color:#31232a;box-shadow:0 3px 8px rgba(61,22,32,.025)}
+.kiosk-link-card:nth-child(even){background:#eaf1ec;border-color:#dae6dd}
+.kiosk-link-card strong{display:block;font-size:clamp(19px,3.4vw,24px);font-weight:900;letter-spacing:-.025em}
+.kiosk-link-card small{display:block;font-size:14px;line-height:1.35;color:#5d5556;margin-top:3px}
+.link-icon{font-size:38px;font-weight:900;color:#8b1938;display:block}.link-arrow{font-size:22px;color:#8a1732}
+.donate-card{background:#fff1e2!important}
+.board-rules{display:flex;flex-wrap:wrap;gap:6px;margin:12px auto 4px;width:100%}
+.board-rules span{background:#f2e9ea;border-radius:9px;padding:8px 9px;color:#6b273c;font-size:12px;line-height:1.2;font-weight:750}
+.board-rules strong{color:#8a1537}
+.kiosk-stage .leader-rows{max-width:750px;margin-left:auto;margin-right:auto;width:100%}
+.kiosk-stage .leader-row{grid-template-columns:36px minmax(0,1fr) 88px;gap:8px;background:#fff;border:1px solid #efe1e4;border-radius:10px;padding:12px;margin-bottom:8px}
+.kiosk-stage .leader-score{font-size:23px;color:#7e1936}
+.kiosk-stage .leader-meta{font-size:12px}
+.leader-detail{font-size:12px;text-align:right;color:#716269;line-height:1.3}
+.stage-voice-form{width:100%;max-width:750px;margin:0 auto}
+.kiosk-stage .issue-summary{margin:20px auto 0;max-width:750px;width:100%}
+.kiosk-stage .issue-summary h3{font-size:19px}
+.kiosk-stage label{font-size:15px}
+.kiosk-stage input:not([type=checkbox]),.kiosk-stage select,.kiosk-stage textarea{min-height:49px;padding:11px 13px}
+.kiosk-stage textarea{min-height:82px}
+.kiosk-stage .voice-form{gap:7px}
+.kiosk-stage .voice-form label{margin-top:6px}
+.kiosk-stage .voice-form .btn{background:#7e1834;color:#fff}
+.quiz-top-hint{font-size:11px;font-weight:900;letter-spacing:.06em;color:#f2dbe1}
+.quiz-quit-link{border:0;background:transparent;color:#7f2b42;display:block;margin:6px auto 0;padding:7px 12px;font-size:13px;font-weight:750;text-decoration:underline;text-underline-offset:3px;min-height:31px}
+.quiz-bottom-hint{display:flex;justify-content:space-between;align-items:center;min-height:50px}
+.quiz-bottom-hint .quiz-quit-link{margin:0}
+.quiz-bottom-triple{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.quiz-bottom-triple .quiz-main-btn{grid-column:1;grid-row:1}
+.quiz-bottom-triple #quiz-share{grid-column:2;grid-row:1}
+.quiz-bottom-triple .quiz-done-btn{grid-column:1 / -1;background:#f8ede9;border-color:#ddc1c7;color:#72162c}
+.quiz-score-number{display:flex;align-items:baseline;justify-content:center;gap:clamp(8px,2.4vw,21px);letter-spacing:-.045em}
+.quiz-score-number>span{display:inline-block}
+.quiz-score-divider{font-size:clamp(40px,8vw,62px);font-weight:500;color:#b09aa1;letter-spacing:0}
+.quiz-score-max{font-size:clamp(45px,8vw,70px);font-weight:850;color:#77525d;letter-spacing:-.025em}
+.quiz-result-code{font-size:clamp(21px,5.3vw,28px)!important;letter-spacing:.12em}
+@media(max-width:420px){
+.kiosk-header{height:60px}
+.kiosk-logo img{max-height:39px;width:min(54vw,197px)}
+.stage-scroll{padding:21px 18px 24px}
+.stage-hero{font-size:clamp(55px,16vw,70px)}
+.stage-heading{font-size:clamp(35px,9vw,46px)}
+.intro-mark{font-size:65px}
+.challenge-illustration{font-size:65px;width:86px;height:86px}
+.kiosk-footer{gap:8px;padding-top:9px}
+.kiosk-back{min-height:48px}
+.kiosk-forward{min-height:48px;font-size:15px}
+.kiosk-link-card{min-height:91px;padding:13px;grid-template-columns:37px minmax(0,1fr) 18px}
+.link-icon{font-size:30px}
+.kiosk-link-card strong{font-size:18px}
+.kiosk-link-card small{font-size:13px}
+.kiosk-stage .leader-row{grid-template-columns:29px minmax(0,1fr) 75px}
+.kiosk-stage .leader-score{font-size:19px}
+.quiz-bottom-triple{gap:7px}
+.quiz-bottom-triple button{min-height:45px;font-size:14px}
+.quiz-score-number{gap:10px}
+.quiz-score-divider{font-size:36px}
+.quiz-score-max{font-size:46px}
+}
+@media(max-height:640px){
+.stage-scroll{padding-top:14px;padding-bottom:19px}
+.intro-mark{font-size:50px;margin-bottom:9px}
+.stage-heading{margin-bottom:10px}
+.stage-copy{margin-bottom:11px}
+.kiosk-link-card{min-height:78px}
+}
