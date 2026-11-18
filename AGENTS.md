@@ -1,0 +1,11 @@
+# Panduan pengembangan Zona Eco Lab
+- Repositori utama: ronnybuol/zona-eco-lab; branch produksi main. Jangan mengubah site tanpa commit yang bisa diaudit.
+- Tetap mobile-first: body >=16px, ukuran tombol >=44px, tidak ada konten yang terpotong pada lebar 320px, indikator scroll/step jelas.
+- Brand Zonautara: pertahankan logo resmi public/logo-zonautara.png; gunakan warna maron/putih/hitam/kuning.
+- Pertanyaan: kategori bolmong/umum; setiap fakta lokal harus punya penjelasan dan tautan sumber yang bisa dibuka. Hindari angka dinamis tanpa tanggal; jangan mengembangkan soal massal dengan variasi serupa tanpa pemeriksaan editorial.
+- API wajib menghitung skor di server dan tidak mengirim kunci jawaban sebelum soal dijawab.
+- Admin tidak menyimpan token di localStorage; API admin perlu Bearer secret ADMIN_TOKEN dari Cloudflare.
+- Cerita dan kontak warga hanya admin; agregat publik tanpa identitas pribadi.
+- Uji kode dan migrasi sebelum deploy. Skema D1 berubah melalui file migrasi baru, bukan edit migrasi yang telah diterapkan.
+- Jangan mewajibkan R2 untuk konten statis; R2 baru dipakai bila perlu penyimpanan berkas dinamis.
+- Peringkat rekreatif tidak cukup untuk menilai hadiah tanpa verifikasi peserta.
