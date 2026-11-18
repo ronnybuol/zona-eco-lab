@@ -15,6 +15,7 @@ CREATE INDEX IF NOT EXISTS ix_questions_category_active ON quiz_questions(catego
 CREATE TABLE IF NOT EXISTS quiz_sessions (
  id TEXT PRIMARY KEY,
  started_at INTEGER NOT NULL,
+ completed_at INTEGER,
  questions_json TEXT NOT NULL,
  answers_json TEXT NOT NULL DEFAULT '{}',
  score INTEGER NOT NULL DEFAULT 0,
