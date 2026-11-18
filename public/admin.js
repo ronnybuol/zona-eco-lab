@@ -33,7 +33,7 @@ async function loadParticipants(){
    finally{editName.disabled=false;}
   });
   card.append(editName);
-  card.append(text('p','Skor terbaik: '+(p.best_score??'—')+'/5 · Durasi: '+(p.best_seconds??'—')+' detik · '+p.plays+' kali bermain'));
+  card.append(text('p','Total '+p.total_points+' poin · '+p.plays+' putaran · '+p.perfect_rounds+' sempurna · Terbaik '+p.best_points+'/100 · Rata-rata '+(p.avg_seconds??'—')+' detik'));
   const label=document.createElement('label');label.className='check';
   const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!p.verified;
   label.append(checkbox,text('span','Kode sudah dicocokkan langsung dengan HP peserta di stan'));
