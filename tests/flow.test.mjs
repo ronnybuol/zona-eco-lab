@@ -18,12 +18,14 @@ function makeDB({manualQuestion=false}={}){
   sql.exec(read('migrations/'+migrations[i]));
  }
  const wrapper={async batch(statements){const results=[];for(const statement of statements)results.push(await statement.run());return results;},prepare(query){
-  const statement=sql.prepare(query);let params=[];
-  const obj={bind(...vals){params=vals;return obj;},
-   async first(){return statement.get(...params)??null;},
-   async all(){return {results:statement.all(...params)};},
-   async run(){const result=statement.run(...params);return {meta:{changes:result.changes,last_row_id:Number(result.lastInsertRowid)}};}
-  };return obj;
+  const statement=sql.prepare(query);
+  const make=values=>({
+   bind(...params){return make(params);},
+   async first(){return statement.get(...values)??null;},
+   async all(){return {results:statement.all(...values)};},
+   async run(){const result=statement.run(...values);return {meta:{changes:result.changes,last_row_id:Number(result.lastInsertRowid)}};}
+  });
+  return make([]);
  }};
  return {sql,env:{DB:wrapper,ADMIN_TOKEN:'test-secret-admin-token-32chars-yes'}};
 }
