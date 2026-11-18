@@ -73,7 +73,7 @@ test('Identitas sekali daftar, satu skor terbaik dan daftar petugas tersedia',()
 test('Trivia liputan dinonaktifkan, bukan dihapus',()=>{
  const migration=read('migrations/0005_curate_bolmong.sql');
  assert.match(migration,/UPDATE quiz_questions SET active=0/);
- assert.match(migration,/question NOT IN/);
+ assert.match(migration,/question IN/);
  assert.equal((migration.match(/^INSERT OR IGNORE INTO quiz_questions/gm)||[]).length,30);
  assert.equal((read('migrations/0004_participants.sql').match(/ALTER TABLE quiz_/g)||[]).length,2);
 });
