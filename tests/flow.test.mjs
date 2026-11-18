@@ -5,7 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {handleApi,eventLeaderboard} from '../src/worker.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql','0007_event_awards.sql'];
+const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql','0007_event_awards.sql','0008_voice_contributor_name.sql'];
 function makeDB({manualQuestion=false}={}){
  const sql=new DatabaseSync(':memory:');
  for(let i=0;i<migrations.length;i++){
@@ -155,5 +155,30 @@ test('Juara empat periode dan juara umum dibekukan, reset periode tidak menghapu
  assert.equal(confirmed.status,200);
  const checked=await eventLeaderboard(env,start+4*period+6000);
  assert.equal(checked.winners.find(w=>w.period===1).status,'confirmed');
+ sql.close();
+});
+
+test('Suara Bumi menyimpan nama atau sapaan dengan aman dan mempertahankan laporan lama',async()=>{
+ const {sql,env}=makeDB();
+ // Baris lama dari sebelum versi 0008 tetap bisa dibaca sebagai laporan anonim.
+ sql.prepare('INSERT INTO voices(topic,region,story,contact,allow_contact) VALUES(?,?,?,?,?)').run('Sampah & plastik','Kabupaten Bolaang Mongondow','Laporan lama dari warga','',0);
+ const legacy=sql.prepare('SELECT contributor_name FROM voices WHERE story=?').get('Laporan lama dari warga');
+ assert.equal(legacy.contributor_name,'');
+ const anonymous=await call(env,'/api/voice',{topic:'Air & kekeringan',region:'Kabupaten Bolaang Mongondow',contributor_name:'',story:'Mau menyampaikan informasi secara anonim.',contact:'',allow_contact:false});
+ assert.equal(anonymous.status,201);
+ const invalid=await call(env,'/api/voice',{topic:'Air & kekeringan',region:'Kabupaten Bolaang Mongondow',contributor_name:'',story:'Sumber air berkurang.',contact:'081200000000',allow_contact:true});
+ assert.equal(invalid.status,400);
+ const named=await call(env,'/api/voice',{topic:'Air & kekeringan',region:'Kabupaten Bolaang Mongondow',contributor_name:'Rina Bolmong',story:'Sumber air berkurang.',contact:'081200000000',allow_contact:true});
+ assert.equal(named.status,201);
+ const admin=await call(env,'/api/admin/voices',undefined,'test-secret-admin-token-32chars-yes');
+ assert.equal(admin.status,200);
+ assert.equal(admin.data.records.find(v=>v.contact==='081200000000').contributor_name,'Rina Bolmong');
+ assert.equal(admin.data.records.find(v=>v.story==='Laporan lama dari warga').contributor_name,'');
+ const exportRequest=new Request('https://eco.test/api/admin/export',{headers:{authorization:'Bearer test-secret-admin-token-32chars-yes'}});
+ const csv=await handleApi(exportRequest,env,'/api/admin/export');
+ assert.equal(csv.status,200);
+ const body=await csv.text();
+ assert.ok(body.includes('contributor_name'));
+ assert.ok(body.includes('Rina Bolmong'));
  sql.close();
 });
