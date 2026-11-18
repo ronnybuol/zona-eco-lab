@@ -99,7 +99,8 @@ test('Enam ilustrasi editorial, urutan layar acara, hadiah, dan informasi Suara 
   assert.ok(existsSync(new URL('../public/art/'+key+'.svg',import.meta.url)),key);
   assert.ok(html.includes('class="stage-art stage-art-'+key+'"'),key+' rendered inline');
  }
- assert.match(html,/Hadiah tiap 3 jam/);
+ assert.match(html,/HADIAH PERIODE/);
+ assert.match(html,/Juara setiap 3 jam/);
  assert.match(html,/Dashboard Admin → Suara Bumi/);
  assert.match(html,/dipertimbangkan sebagai bahan liputan/);
  assert.ok(js.includes("serverOffsetMs"));
