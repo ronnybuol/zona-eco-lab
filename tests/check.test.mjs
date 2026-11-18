@@ -19,11 +19,11 @@ function parseValues(line){
  }
  return values;
 }
-const lines=['migrations/0002_seed_questions.sql','migrations/0003_expand_questions.sql'].flatMap(f=>read(f).split('\n').filter(l=>l.startsWith('INSERT OR IGNORE INTO quiz_questions')));
+const lines=['migrations/0002_seed_questions.sql','migrations/0003_expand_questions.sql','migrations/0005_curate_bolmong.sql'].flatMap(f=>read(f).split('\n').filter(l=>l.startsWith('INSERT OR IGNORE INTO quiz_questions')));
 const data=lines.map(parseValues);
-test('Bank soal unik dan terdiri dari 139 pertanyaan',()=>{
- assert.equal(data.length,139);
- assert.equal(data.filter(q=>q[0]==='bolmong').length,34);
+test('Bank soal unik dan terdiri dari 169 pertanyaan',()=>{
+ assert.equal(data.length,169);
+ assert.equal(data.filter(q=>q[0]==='bolmong').length,64);
  assert.equal(data.filter(q=>q[0]==='umum').length,105);
  assert.equal(new Set(data.map(q=>q[2].trim().toLowerCase())).size,data.length);
 });
@@ -39,7 +39,7 @@ test('Semua pertanyaan punya 4 opsi unik, satu jawaban dan sumber HTTPS',()=>{
  }
 });
 test('Berkas aplikasi, logo resmi dan migrasi tersedia',()=>{
- for(const name of ['src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
+ for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
 });
 test('Kode JavaScript lolos pemeriksaan sintaks Node.js',()=>{
  for(const file of ['src/worker.js','public/app.js','public/admin.js']){
@@ -53,8 +53,27 @@ test('Server tidak mengirim kunci jawaban ketika memulai permainan',()=>{
  assert.match(code,/correct_index:q\.answer/);
  assert.match(code,/completed_at=CASE WHEN/);
 });
-test('Tampilan punya font mobile dan petunjuk scroll',()=>{
- assert.match(read('public/index.html'),/scroll-hint/);
- assert.match(read('public/style.css'),/max-width:650px/);
- assert.match(read('public/style.css'),/font-size:16px/);
+test('Kuis memiliki tampilan layar penuh dengan footer tetap dan scroll internal',()=>{
+ const html=read('public/index.html'),css=read('public/style.css');
+ for(const id of ['quiz-layer','quiz-profile','quiz-question','quiz-feedback','quiz-result','quiz-next','quiz-replay'])assert.match(html,new RegExp('id="'+id+'"'));
+ assert.match(css,/\.quiz-layer\{position:fixed/);
+ assert.match(css,/height:100dvh/);
+ assert.match(css,/\.quiz-scroll\{[^}]*overflow-y:auto/);
+ assert.match(css,/\.quiz-bottom\{flex:none/);
+ assert.match(css,/max-width:420px/);
+});
+test('Identitas sekali daftar, satu skor terbaik dan daftar petugas tersedia',()=>{
+ const worker=read('src/worker.js'),admin=read('public/admin.html');
+ for(const route of ['/api/player/register','/api/player/me','/api/admin/participants','/api/admin/participants/verify'])assert.ok(worker.includes(route));
+ assert.ok(worker.includes("PARTITION BY COALESCE(participant_id"));
+ assert.ok(worker.includes("sess.participant_id!==player.id"));
+ assert.ok(worker.includes("token_hash"));
+ assert.ok(admin.includes('data-tab="participants"'));
+});
+test('Trivia liputan dinonaktifkan, bukan dihapus',()=>{
+ const migration=read('migrations/0005_curate_bolmong.sql');
+ assert.match(migration,/UPDATE quiz_questions SET active=0/);
+ assert.match(migration,/question NOT IN/);
+ assert.equal((migration.match(/^INSERT OR IGNORE INTO quiz_questions/gm)||[]).length,30);
+ assert.equal((read('migrations/0004_participants.sql').match(/ALTER TABLE quiz_/g)||[]).length,2);
 });
