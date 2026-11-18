@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS quiz_participants (
   nickname TEXT NOT NULL,
   region TEXT NOT NULL,
   display_consent INTEGER NOT NULL DEFAULT 1,
+  verified INTEGER NOT NULL DEFAULT 0,
+  verified_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_quiz_participant_code ON quiz_participants(code);
