@@ -39,7 +39,7 @@ test('Semua pertanyaan punya 4 opsi unik, satu jawaban dan sumber HTTPS',()=>{
  }
 });
 test('Berkas aplikasi, logo resmi dan migrasi tersedia',()=>{
- for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
+ for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
 });
 test('Kode JavaScript lolos pemeriksaan sintaks Node.js',()=>{
  for(const file of ['src/worker.js','public/app.js','public/admin.js']){
@@ -62,10 +62,10 @@ test('Kuis memiliki tampilan layar penuh dengan footer tetap dan scroll internal
  assert.match(css,/\.quiz-bottom\{flex:none/);
  assert.match(css,/max-width:420px/);
 });
-test('Identitas sekali daftar, satu skor terbaik dan daftar petugas tersedia',()=>{
+test('Identitas sekali daftar, poin kumulatif dan daftar petugas tersedia',()=>{
  const worker=read('src/worker.js'),admin=read('public/admin.html');
  for(const route of ['/api/player/register','/api/player/me','/api/admin/participants','/api/admin/participants/verify'])assert.ok(worker.includes(route));
- assert.ok(worker.includes("PARTITION BY COALESCE(r.participant_id"));
+ assert.ok(worker.includes("SUM(r.score)*20 total_points"));
  assert.ok(worker.includes("sess.participant_id!==player.id"));
  assert.ok(worker.includes("token_hash"));
  assert.ok(admin.includes('data-tab="participants"'));
@@ -76,4 +76,17 @@ test('Trivia liputan dinonaktifkan, bukan dihapus',()=>{
  assert.match(migration,/question IN/);
  assert.equal((migration.match(/^INSERT OR IGNORE INTO quiz_questions/gm)||[]).length,30);
  assert.equal((read('migrations/0004_participants.sql').match(/ALTER TABLE quiz_/g)||[]).length,2);
+});
+
+test('Setiap bagian adalah satu layar dan ada CTA untuk Saweria serta Teras.id',()=>{
+ const html=read('public/index.html'),js=read('public/app.js'),css=read('public/style.css');
+ for(const screen of ['intro','challenge','leaderboard','jelajah','suara','dukung'])assert.ok(html.includes('data-stage="'+screen+'"'));
+ assert.equal((html.match(/class="kiosk-stage/g)||[]).length,6);
+ for(const id of ['stage-next','stage-back','quiz-finish','quiz-quit-question','quiz-quit-feedback'])assert.ok(html.includes('id="'+id+'"'));
+ assert.ok(html.includes('https://saweria.co/zonautara'));
+ assert.ok(html.includes('https://s.id/dukungzu'));
+ assert.ok(js.includes("setStage('leaderboard')")||js.includes("closeLayer('leaderboard')"));
+ assert.ok(css.includes('height:100dvh'));
+ assert.ok(css.includes('.quiz-score-divider'));
+ assert.equal(html.includes('id="quiz-close"'),false);
 });

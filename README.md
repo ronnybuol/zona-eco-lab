@@ -2,15 +2,15 @@
 
 Microsite **mobile-first** untuk Bolmong Eco Future, Jumat 20 November 2026, Lolak. Konten: **Tantangan Bumi**, **leaderboard**, **Jelajah Iklim**, **Suara Bumi**, dan dashboard admin untuk bank soal. Identitas Zonautara berasal dari aset logo resmi yang disediakan redaksi.
 
-## Status versi 3 (18 November 2026)
+## Status versi 4 (18 November 2026)
 - Aplikasi produksi terhubung ke Cloudflare Workers: https://zona-eco-lab.ronny-buol.workers.dev/. Gunakan `main` untuk versi produksi; branch fitur harus lolos pemeriksaan terlebih dahulu.
 - Setelah migrasi 0005: **169 soal tersimpan**, **141 aktif** (36 Bolmong kontekstual dan 105 umum), sementara 28 trivia detail liputan dinonaktifkan tanpa dihapus.
 - Setiap putaran: 2 Bolmong + 3 umum. Server mengacak soal **dan urutan opsi**. HP mengingat soal yang sudah pernah muncul; pengulangan baru terjadi ketika soal baru dari kategori itu habis atau riwayat browser hilang.
-- Permainan **satu tahap satu layar penuh**: profil sekali, soal, pembahasan, lalu soal selanjutnya. Scroll hanya di area isi jika HP sangat pendek; tombol aksi tetap di bawah.
+- Seluruh pengalaman **satu tahap satu layar penuh**: perkenalan → Tantangan Bumi → leaderboard → Jelajah Iklim → Suara Bumi → Dukung Zonautara. Saat kuis dimulai, profil sekali → soal → pembahasan → hasil. Scroll hanya pada area isi jika HP pendek; navigasi dan CTA utama tetap di bawah.
 - Profil nama panggilan dan wilayah didaftarkan sekali per browser/HP tanpa nomor telepon. Token acak hanya disimpan di perangkat, hash token di D1; kode peserta ditampilkan di hasil. Main ulang otomatis mempertahankan nama.
-- Server menilai jawaban; leaderboard hanya menyimpan satu **skor terbaik per profil**, dengan waktu tercepat sebagai pembanding.
+- Server menilai jawaban, masing-masing benar bernilai 20 poin sehingga **satu putaran maksimal 100 poin**. Leaderboard menampilkan **akumulasi seluruh poin dari seluruh putaran satu profil**, bukan hanya skor tertinggi. Urutan: total poin menurun, jumlah putaran sempurna (100/100) menurun, rata-rata waktu menjawab menaik, lalu tanggal permainan pertama.
 - Admin menambah, mengubah, menonaktifkan dan **impor hingga 25 soal JSON per batch**; jangan mengimpor pertanyaan tanpa verifikasi.
-- Leaderboard **rekreatif**: perangkat/browser lain dapat membuat profil tambahan. Untuk hadiah, petugas mencocokkan kode di HP melalui tab Peserta dan melakukan verifikasi langsung. WhatsApp tidak wajib.
+- Leaderboard **rekreatif**: kode pemain baru berbentuk `ZU-1234`, empat digit, dipilih acak dan diuji unik; kode lama dimigrasikan ke format singkat. Perangkat/browser lain tetap dapat membuat profil tambahan. Untuk hadiah, petugas mencocokkan kode di HP melalui tab Peserta dan melakukan verifikasi langsung. WhatsApp tidak wajib.
 - Suara Bumi memerlukan persetujuan untuk menyimpan kontak; cerita dan kontak tidak tampil publik.
 
 ## Struktur
@@ -22,6 +22,7 @@ migrations/0002_seed_questions.sql  75 soal gelombang awal
 migrations/0003_expand_questions.sql  64 soal tambahan (total 139)
 migrations/0004_participants.sql  profil peserta dan skor terhubung
 migrations/0005_curate_bolmong.sql  28 trivia nonaktif dan 30 soal situasional
+migrations/0006_short_codes.sql  kode peserta singkat untuk profil lama
 wrangler.toml          Bindings produksi D1
 ```
 **R2 belum dipakai pada versi ringan ini**. Logo/CSS/JS disajikan dari Workers Static Assets (langsung dari repo). Tambah binding R2 hanya ketika ada penyimpanan foto atau berkas yang memang memerlukan R2. Jangan menaruh kontak warga dalam bucket publik.
@@ -47,7 +48,7 @@ Database produksi sudah ada dan ID-nya telah tercatat dalam konfigurasi. Jangan 
 ```bash
 npx wrangler d1 migrations apply DB --remote
 ```
-Skrip 0002 dan 0003 mengisi 139 soal; 0004 menambah profil tanpa menghapus skor lama; 0005 mengkurasi trivia dan menambah soal kontekstual. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
+Skrip 0002 dan 0003 mengisi 139 soal; 0004 menambah profil tanpa menghapus skor lama; 0005 mengkurasi trivia dan menambah soal kontekstual; 0006 menyingkat kode peserta lama tanpa menghapus token atau hasil. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
 
 **D. Deploy pertama**:
 ```bash
@@ -112,8 +113,13 @@ Leaderboard mengutamakan skor benar, lalu durasi. Sistem mencatat sesi server da
 Jangan unggah token API, password, atau identitas warga ke repo publik. Cerita warga tidak tampil publik; yang muncul hanya agregat pilihan kategori. Pertimbangkan aturan retensi/hapus data setelah acara, backup CSV dengan pengamanan, rate limiting WAF, dan Turnstile bila trafik tidak terkendali. Untuk perawatan kode, ikuti `AGENTS.md`.
 
 ## Pengujian dan hadiah
-- Uji profil baru, lalu uji bermain ulang dari browser sama: nama tetap dan leaderboard hanya satu entri terbaik.
+- Uji profil baru, lalu bermain dua kali dari browser sama: nama tetap, leaderboard tetap satu baris profil tetapi total poin bertambah sesuai hasil kedua putaran.
 - Dashboard /admin.html memiliki tab Peserta. Petugas mencocokkan kode yang tampil di HP, lalu menandai akun terverifikasi.
 - Kode peserta bukan bukti identitas yang kuat. Tanpa login/nomor telepon, satu orang masih dapat membuat beberapa akun melalui browser atau HP lain. Hadiah tetap memerlukan verifikasi manusia.
 - Jangan mengumumkan hadiah otomatis dari papan peringkat. Kontak untuk hadiah dikumpulkan secara terpisah hanya bila diperlukan dan dengan persetujuan.
 - Setelah acara, tinjau retensi profil pemain dan data kontak. Skor uji versi lama tetap ada sebagai entri legacy hingga dibersihkan secara terkontrol.
+
+## Layar dukungan Zonautara
+- Donasi sukarela: https://saweria.co/zonautara
+- Dukungan/berlangganan liputan: https://s.id/dukungzu
+- Kedua tautan dibuka di tab baru. Dukungan pembaca tidak memberi pengaruh editorial terhadap pemberitaan.

@@ -5,10 +5,13 @@ import {DatabaseSync} from 'node:sqlite';
 import {handleApi} from '../src/worker.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql'];
+const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql'];
 function makeDB({manualQuestion=false}={}){
  const sql=new DatabaseSync(':memory:');
  for(let i=0;i<migrations.length;i++){
+  if(i===5){
+   sql.prepare("INSERT INTO quiz_participants(id,token_hash,code,nickname,region) VALUES(?,?,?,?,?)").run('legacy-uuid','test-legacy-hash','ECO-A1B2C3D4E5','Pemain Lama','Kabupaten Bolaang Mongondow');
+  }
   if(i===3&&manualQuestion){
     sql.prepare("INSERT INTO quiz_questions(category,topic,question,options_json,correct_index,explanation,source_url,active) VALUES(?,?,?,?,?,?,?,1)").run('bolmong','Tambahan admin','Jika melihat sampah di sekitar sungai, apa pilihan yang paling aman?','["Mengangkat dengan aman","Membiarkan saja","Membakarnya","Membuangnya ke aliran air"]',0,'Pengurangan sampah membantu mengurangi penyumbatan aliran air.','https://zonautara.com');
   }
@@ -45,6 +48,7 @@ async function round(env,token){
 test('Seluruh migrasi berjalan dan 141 soal aktif tanpa menghapus tambahan admin',()=>{
  const {sql}=makeDB({manualQuestion:true});
  assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_questions').get().n,170);
+ assert.match(sql.prepare("SELECT code FROM quiz_participants WHERE id='legacy-uuid'").get().code,/^ZU-[0-9]{4}$/);
  assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_questions WHERE active=1').get().n,142);
  assert.equal(sql.prepare("SELECT COUNT(*) n FROM quiz_questions WHERE category='bolmong' AND active=1").get().n,37);
  assert.equal(sql.prepare("SELECT active FROM quiz_questions WHERE question='Tanggal apa tercantum sebagai pembangunan pada dinding Bendung Lolak Atas menurut liputan?'").get().active,0);
@@ -55,19 +59,25 @@ test('Registrasi sekali, dua permainan, satu entri leaderboard dengan nickname t
  const {sql,env}=makeDB();
  const user=await signup(env,'Penjaga Lolak');assert.equal(user.status,201);
  assert.match(user.data.token,/^[0-9a-f]{64}$/);
- assert.match(user.data.player.code,/^ECO-[0-9A-F]{10}$/);
+ assert.match(user.data.player.code,/^ZU-[0-9]{4}$/);
  const profile=await call(env,'/api/player/me',{token:user.data.token});
  assert.equal(profile.data.player.nickname,'Penjaga Lolak');
+ let summed=0;
  for(let i=0;i<2;i++){
   const session_id=await round(env,user.data.token);
   const result=await call(env,'/api/quiz/finish',{session_id,token:user.data.token,nickname:'Nama palsu'});
   assert.equal(result.status,200);
   assert.equal(result.data.nickname,'Penjaga Lolak');
+  assert.equal(result.data.points,result.data.score*20);
+  summed+=result.data.points;
+  assert.equal(result.data.total_points,summed);
  }
  const board=await call(env,'/api/leaderboard');
  assert.equal(board.status,200);
  assert.equal(board.data.leaders.length,1);
  assert.equal(board.data.leaders[0].nickname,'Penjaga Lolak');
+ assert.equal(board.data.leaders[0].total_points,summed);
+ assert.equal(board.data.leaders[0].rounds,2);
  assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_results').get().n,2);
  sql.close();
 });
@@ -87,8 +97,10 @@ test('Verifikasi hadiah hanya untuk petugas berotorisasi',async()=>{
  const secret='test-secret-admin-token-32chars-yes';
  const list=await call(env,'/api/admin/participants',undefined,secret);
  assert.equal(list.status,200);
- assert.equal(list.data.participants[0].code,registered.data.player.code);
- const id=list.data.participants[0].id;
+ const current=list.data.participants.find(p=>p.code===registered.data.player.code);
+ assert.ok(current);
+ assert.equal(current.total_points,0);
+ const id=current.id;
  const correction=await call(env,'/api/admin/participants/rename',{id,nickname:'Peserta Diperbaiki'},secret);
  assert.equal(correction.status,200);
  assert.equal(sql.prepare('SELECT nickname FROM quiz_participants WHERE id=?').get(id).nickname,'Peserta Diperbaiki');

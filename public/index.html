@@ -1,61 +1,108 @@
 <!doctype html>
 <html lang="id"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#6a1025"><meta name="description" content="Zona Eco Lab: Tantangan Bumi, Jelajah Iklim, dan Suara Bumi di Bolmong Eco Future 2026.">
-<title>ZONA ECO LAB · Zonautara.com</title>
-<link rel="stylesheet" href="/style.css">
-<script src="/app.js" defer></script>
-</head><body>
-<a class="skip" href="#main">Lewati ke konten</a>
-<header class="header"><div class="header-inner">
-<a class="brand" href="#top" aria-label="Zonautara.com"><img src="/logo-zonautara.png" alt="Zonautara.com — Tak Sekadar Menyajikan Berita"></a>
-<a href="#leaderboard" class="header-link">🏆 Peringkat</a>
-</div></header>
-<main id="main">
-<section class="hero" id="top"><div class="wrap hero-wrap">
-<p class="eyebrow">BOLMONG ECO FUTURE 2026 · LOLAK</p>
-<h1>ZONA <span>ECO</span> LAB<span class="dot">.</span></h1>
-<p class="hero-lead">Main. Jelajahi. Ceritakan.</p>
-<p class="hero-copy">Seberapa kenal kamu dengan bumi tempat tinggalmu? Coba lima pertanyaan, kumpulkan skor, dan lihat peringkatmu!</p>
-<div class="actions"><a class="btn primary" href="#game">Mulai tantangan ↗</a><a class="btn outline" href="#suara">Titip cerita</a></div>
-</div></section>
-<div class="wrap">
-<section id="game" class="feature" aria-labelledby="game-title">
-<div class="section-top"><p class="eyebrow dark">01 / MAIN</p><span class="pill">2 SOAL BOLMONG + 3 UMUM</span></div>
-<h2 id="game-title">Tantangan Bumi</h2>
-<p class="intro">Lima soal acak tentang lingkungan dan kehidupan di Bolmong. Tanpa instalasi, tanpa login, cukup satu profil pemain di HP ini.</p>
-<div class="game-panel game-entry">
-<div class="game-symbol" aria-hidden="true">✳</div>
-<h3>Berani tantangan 60 detik?</h3>
-<p class="muted">Sekali mulai, seluruh permainan berlangsung dalam tampilan layar penuh. Tidak perlu mencari tombol dengan menggulir halaman panjang.</p>
-<button id="start-game" class="btn primary full" type="button">Mulai Tantangan Bumi ↗</button>
-<p id="game-status" class="muted small" role="status">Satu soal per layar · 5 pertanyaan · Bisa main ulang</p>
+<meta name="theme-color" content="#6a1025">
+<meta name="description" content="ZONA ECO LAB oleh Zonautara.com: main kuis lingkungan, jelajahi peta, dengar suara warga, dan dukung jurnalisme independen.">
+<title>ZONA ECO LAB · Bolmong Eco Future 2026</title>
+<link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body class="kiosk-mode">
+<a class="skip" href="#app-stage">Lewati ke konten</a>
+<div class="kiosk-shell">
+<header class="kiosk-header">
+<a href="#intro" class="kiosk-logo" aria-label="Zonautara, kembali ke awal"><img src="/logo-zonautara.png" alt="Zonautara.com"></a>
+<div class="kiosk-step"><span id="stage-count">01 / 06</span><span class="kiosk-step-dot" aria-hidden="true">✳</span></div>
+</header>
+<main class="kiosk-main" id="app-stage">
+<section class="kiosk-stage is-active kiosk-intro" data-stage="intro" aria-labelledby="intro-title">
+ <div class="stage-scroll stage-center">
+  <div class="intro-mark" aria-hidden="true">✳</div>
+  <p class="stage-kicker">ZONAUTARA.COM · BOLMONG ECO FUTURE 2026</p>
+  <h1 id="intro-title" class="stage-hero">ZONA <span>ECO</span> LAB<span class="stage-dot">.</span></h1>
+  <p class="stage-lead">Main. Jelajahi. Ceritakan.</p>
+  <p class="stage-copy">Kenali lingkungan di sekitar kita melalui permainan, data, dan cerita warga. Semua bisa dilakukan dari HP.</p>
+  <div class="stage-mini-info"><span>5 pertanyaan</span><span>Data & cerita warga</span><span>Tanpa login</span></div>
+ </div>
+</section>
+<section class="kiosk-stage" data-stage="challenge" aria-labelledby="challenge-title">
+ <div class="stage-scroll stage-center">
+  <p class="stage-kicker">01 · MAIN</p>
+  <div class="challenge-illustration" aria-hidden="true">✳</div>
+  <h2 id="challenge-title" class="stage-heading">Tantangan Bumi</h2>
+  <p class="stage-lead">Lima soal. Seratus poin.</p>
+  <p class="stage-copy">Dapatkan hingga <strong>100 poin per permainan</strong>. Main berkali-kali untuk mengumpulkan total poin dan naik di leaderboard.</p>
+  <div class="feature-tags"><span>2 soal Bolmong</span><span>3 soal lingkungan</span><span>Acak tiap putaran</span></div>
+  <p id="game-status" class="muted small" role="status">Profil pemain cukup dibuat sekali di perangkat ini.</p>
+  <button id="skip-game" class="stage-text-button" type="button">Lewati permainan, lihat leaderboard →</button>
+ </div>
+</section>
+<section class="kiosk-stage" data-stage="leaderboard" aria-labelledby="leader-title">
+ <div class="stage-scroll">
+  <p class="stage-kicker">02 · PARA PENJAGA BUMI</p>
+  <h2 id="leader-title" class="stage-heading">Leaderboard</h2>
+  <p class="stage-copy">Setiap jawaban benar bernilai <strong>20 poin</strong>. Poin dari seluruh permainan dijumlahkan. Makin sering bermain dan menjawab benar, makin tinggi posisimu!</p>
+  <div class="board-rules"><span><strong>1.</strong> Total poin</span><span><strong>2.</strong> Putaran 100 poin</span><span><strong>3.</strong> Rata-rata waktu</span></div>
+  <button id="refresh-board" class="stage-text-button" type="button">Perbarui peringkat ↻</button>
+  <div id="leader-rows" class="leader-rows"><p class="muted">Memuat peringkat…</p></div>
+  <p class="muted small">Jika total poin sama, lebih banyak putaran sempurna menang; berikutnya rata-rata waktu tercepat. Hadiah memerlukan pemeriksaan petugas di stan.</p>
+ </div>
+</section>
+<section class="kiosk-stage" data-stage="jelajah" aria-labelledby="explore-title">
+ <div class="stage-scroll stage-center">
+  <p class="stage-kicker">03 · JELAJAHI</p>
+  <h2 id="explore-title" class="stage-heading">Data punya cerita.</h2>
+  <p class="stage-copy">Krisis iklim bukan sekadar angka. Jelajahi peta dan kisah warga melalui dua proyek jurnalistik Zonautara.</p>
+  <div class="kiosk-link-cards">
+   <a href="https://iklimkita.com/pantau/" target="_blank" rel="noopener noreferrer" class="kiosk-link-card"><span class="link-icon" aria-hidden="true">◎</span><span><strong>Pantau Iklim</strong><small>Jelajahi laporan warga di peta.</small></span><span class="link-arrow">↗</span></a>
+   <a href="https://iklimkita.com/jejak/" target="_blank" rel="noopener noreferrer" class="kiosk-link-card"><span class="link-icon" aria-hidden="true">✦</span><span><strong>Jejak Iklim</strong><small>Baca kisah warga menghadapi perubahan iklim.</small></span><span class="link-arrow">↗</span></a>
+  </div>
+ </div>
+</section>
+<section class="kiosk-stage" data-stage="suara" aria-labelledby="voice-title">
+ <div class="stage-scroll">
+  <p class="stage-kicker">04 · CERITAKAN</p>
+  <h2 id="voice-title" class="stage-heading">Suara Bumi</h2>
+  <p class="stage-copy">Persoalan lingkungan apa yang paling terasa di tempat tinggalmu? Bantu Zonautara mengetahui isu yang penting bagi warga.</p>
+  <form id="voice-form" class="voice-form stage-voice-form">
+   <label for="voice-topic">Masalah paling dekat denganmu</label>
+   <select id="voice-topic" name="topic" required><option value="">Pilih isu…</option><option>Sampah & plastik</option><option>Banjir & longsor</option><option>Air & kekeringan</option><option>Hutan & satwa</option><option>Pangan & pertanian</option><option>Pesisir & laut</option><option>Tambang & pencemaran</option><option>Lainnya</option></select>
+   <label for="voice-region">Wilayah</label>
+   <select id="voice-region" name="region" required><option value="">Pilih wilayah…</option><option>Kabupaten Bolaang Mongondow</option><option>Kota Kotamobagu</option><option>Kabupaten Bolaang Mongondow Timur</option><option>Kabupaten Bolaang Mongondow Selatan</option><option>Kabupaten Bolaang Mongondow Utara</option><option>Wilayah lain / tidak disebutkan</option></select>
+   <label for="voice-story">Cerita singkat (opsional)</label>
+   <textarea id="voice-story" name="story" maxlength="650" rows="3" placeholder="Apa yang terjadi? Di mana?"></textarea>
+   <label for="voice-contact">Kontak untuk redaksi (opsional)</label>
+   <input id="voice-contact" name="contact" maxlength="120" type="text" placeholder="Nomor atau email, jika berkenan">
+   <label class="check"><input id="voice-consent" type="checkbox"><span>Jika mengisi kontak, saya bersedia dihubungi redaksi.</span></label>
+   <button class="btn primary full" id="voice-send" type="submit">Kirim Suara Bumi ↗</button>
+   <p id="voice-status" class="muted" role="status"></p>
+  </form>
+  <div class="issue-summary"><h3>Isu pilihan pengunjung</h3><div id="issue-bars"><p class="muted">Memuat…</p></div><p class="muted small">Partisipasi sukarela, bukan survei representatif. Cerita dan kontak tidak dipublikasikan otomatis.</p></div>
+ </div>
+</section>
+<section class="kiosk-stage" data-stage="dukung" aria-labelledby="support-title">
+ <div class="stage-scroll stage-center">
+  <p class="stage-kicker">05 · BERSAMA ZONAUTARA</p>
+  <div class="support-mark" aria-hidden="true">♥</div>
+  <h2 id="support-title" class="stage-heading">Jurnalisme publik butuh dukunganmu.</h2>
+  <p class="stage-copy">Dari sawah hingga pesisir, Zonautara terus menelusuri persoalan yang memengaruhi kehidupan warga. Dukung liputan independen agar kerja ini terus berjalan.</p>
+  <div class="kiosk-link-cards">
+    <a class="kiosk-link-card donate-card" href="https://saweria.co/zonautara" target="_blank" rel="noopener noreferrer"><span class="link-icon" aria-hidden="true">♥</span><span><strong>Donasi melalui Saweria</strong><small>Dukungan sukarela, berapa pun nilainya.</small></span><span class="link-arrow">↗</span></a>
+    <a class="kiosk-link-card" href="https://s.id/dukungzu" target="_blank" rel="noopener noreferrer"><span class="link-icon" aria-hidden="true">✦</span><span><strong>Berlangganan Teras.id</strong><small>Baca dan dukung liputan mendalam.</small></span><span class="link-arrow">↗</span></a>
+  </div>
+  <p class="muted small">Dukungan pembaca tidak memberikan hak mengatur isi pemberitaan.</p>
+  <a href="https://zonautara.com/" target="_blank" rel="noopener noreferrer" class="stage-text-button">Kunjungi Zonautara.com ↗</a>
+ </div>
+</section>
+</main>
+<footer class="kiosk-footer" aria-label="Navigasi pengalaman">
+ <button id="stage-back" class="kiosk-back" type="button" aria-label="Layar sebelumnya">←</button>
+ <button id="stage-next" class="kiosk-forward" type="button">Coba Tantangan Bumi →</button>
+</footer>
 </div>
-</section>
-<section id="leaderboard" class="feature board-feature" aria-labelledby="leader-title">
-<div class="section-top"><p class="eyebrow dark">PERINGKAT ACARA</p><button id="refresh-board" class="mini-button" type="button">Perbarui ↻</button></div>
-<h2 id="leader-title">Leaderboard</h2><p class="intro">Skor tertinggi di atas; jika sama, waktu penyelesaian tercepat diutamakan. Nama panggilan belum terverifikasi untuk penentuan hadiah.</p>
-<div id="leader-rows" class="leader-rows"><p class="muted">Memuat peringkat…</p></div>
-</section>
-<section class="feature explore" id="jelajah"><p class="eyebrow dark">02 / JELAJAHI</p><h2>Data punya cerita.</h2><p class="intro">Buka peta dan kisah warga tentang perubahan iklim. Temukan persoalan lingkungan yang dekat dengan tempat tinggalmu.</p>
-<div class="two-cards"><a class="explore-card" href="https://iklimkita.com/pantau/" target="_blank" rel="noopener noreferrer"><div class="card-emoji">◎</div><h3>Pantau Iklim</h3><p>Jelajahi laporan warga lewat peta.</p><strong>Buka peta ↗</strong></a><a class="explore-card" href="https://iklimkita.com/jejak/" target="_blank" rel="noopener noreferrer"><div class="card-emoji">✦</div><h3>Jejak Iklim</h3><p>Baca cerita warga menghadapi krisis iklim.</p><strong>Baca kisah ↗</strong></a></div>
-</section>
-<section class="feature" id="suara"><p class="eyebrow dark">03 / CERITAKAN</p><h2>Suara Bumi</h2><p class="intro">Masalah lingkungan apa yang paling dekat dengan kehidupanmu? Pilih satu isu. Cerita dan kontak hanya dibaca tim Zonautara, tidak dipublikasikan otomatis.</p>
-<form id="voice-form" class="voice-form">
-<label for="voice-topic">Persoalan yang paling kamu rasakan</label><select id="voice-topic" name="topic" required><option value="">Pilih satu isu…</option><option>Sampah & plastik</option><option>Banjir & longsor</option><option>Air & kekeringan</option><option>Hutan & satwa</option><option>Pangan & pertanian</option><option>Pesisir & laut</option><option>Tambang & pencemaran</option><option>Lainnya</option></select>
-<label for="voice-region">Asal wilayah</label><select id="voice-region" name="region" required><option value="">Pilih wilayah…</option><option>Kabupaten Bolaang Mongondow</option><option>Kota Kotamobagu</option><option>Kabupaten Bolaang Mongondow Timur</option><option>Kabupaten Bolaang Mongondow Selatan</option><option>Kabupaten Bolaang Mongondow Utara</option><option>Wilayah lain / tidak disebutkan</option></select>
-<label for="voice-story">Ceritakan singkat (opsional)</label><textarea id="voice-story" name="story" maxlength="650" rows="4" placeholder="Apa yang terjadi? Sejak kapan? Di mana?"></textarea><p class="muted small">Maksimum 650 karakter. Jangan cantumkan alamat rumah atau data sensitif.</p>
-<label for="voice-contact">Kontak yang boleh dihubungi redaksi (opsional)</label><input id="voice-contact" type="text" name="contact" maxlength="120" placeholder="Email atau nomor HP (jika berkenan)">
-<label class="check"><input id="voice-consent" type="checkbox"><span>Jika mengisi kontak, saya mengizinkan redaksi menghubungi saya terkait cerita ini.</span></label>
-<button id="voice-send" class="btn primary full" type="submit">Kirim Suara Bumi ↗</button><p id="voice-status" role="status" class="muted"></p></form>
-<div class="issue-summary"><h3>Isu yang dipilih pengunjung</h3><div id="issue-bars"><p class="muted">Memuat data agregat…</p></div><p class="muted small">Angka ini berasal dari partisipasi sukarela, bukan survei representatif.</p></div>
-</section>
-</div></main>
-<footer class="footer"><div class="wrap footer-inner"><img src="/logo-zonautara.png" alt="Zonautara.com"><p>Zona Eco Lab · Bolmong Eco Future 2026</p><p><a href="/admin.html">Petugas</a> · <a href="https://zonautara.com" target="_blank" rel="noopener">Berita Zonautara ↗</a></p></div></footer>
 <div id="quiz-layer" class="quiz-layer hidden" role="dialog" aria-modal="true" aria-label="Permainan Tantangan Bumi">
  <header class="quiz-topbar">
   <span class="quiz-brand">✳ ZONA ECO LAB</span>
-  <button id="quiz-close" class="quiz-close" type="button" aria-label="Tutup permainan">Tutup <span aria-hidden="true">✕</span></button>
+  <span class="quiz-top-hint">TANTANGAN BUMI</span>
  </header>
  <div class="quiz-meter">
   <div class="quiz-meter-line"><strong id="quiz-phase">TANTANGAN BUMI</strong><span id="quiz-step-label">5 pertanyaan</span></div>
@@ -91,7 +138,7 @@
     <div id="quiz-options" class="quiz-options" role="group" aria-label="Pilih satu jawaban"></div>
     <p id="quiz-answer-status" class="quiz-error-text" role="status"></p>
   </div>
-  <div class="quiz-bottom quiz-bottom-hint"><span><span aria-hidden="true">↑</span> Pilih satu jawaban untuk melanjutkan</span></div>
+  <div class="quiz-bottom quiz-bottom-hint"><span>Pilih satu jawaban</span><button class="quiz-quit-link" id="quiz-quit-question" type="button">Keluar dari kuis</button></div>
  </section>
  <section id="quiz-feedback" class="quiz-screen hidden" aria-labelledby="quiz-feedback-title">
   <div class="quiz-scroll">
@@ -101,25 +148,26 @@
     <p id="quiz-explanation" class="quiz-explanation"></p>
     <a id="quiz-reference" class="quiz-reference" target="_blank" rel="noopener noreferrer">Baca penjelasan lebih lanjut ↗</a>
   </div>
-  <div class="quiz-bottom"><button id="quiz-next" class="quiz-main-btn" type="button">Pertanyaan berikutnya →</button></div>
+  <div class="quiz-bottom"><button id="quiz-next" class="quiz-main-btn" type="button">Pertanyaan berikutnya →</button><button class="quiz-quit-link" id="quiz-quit-feedback" type="button">Keluar dari kuis</button></div>
  </section>
  <section id="quiz-result" class="quiz-screen hidden" aria-labelledby="quiz-result-title">
   <div class="quiz-scroll">
-    <p class="quiz-kicker">TANTANGAN SELESAI</p><div class="quiz-score-number"><span id="quiz-result-score">0</span><small>/5</small></div>
+    <p class="quiz-kicker">TANTANGAN SELESAI</p><div class="quiz-score-number"><span id="quiz-result-score">0</span><span class="quiz-score-divider" aria-hidden="true">/</span><span class="quiz-score-max">100</span></div>
     <h2 id="quiz-result-title"></h2><p id="quiz-result-summary"></p>
     <div class="quiz-result-card">
       <p class="quiz-answer-label">PROFIL PESERTA</p><strong id="quiz-result-name"></strong>
-      <p class="quiz-result-code-label">Kode peserta (simpan jika ada hadiah)</p><strong id="quiz-result-code" class="quiz-result-code"></strong>
+      <p class="quiz-result-code-label">Kode peserta</p><strong id="quiz-result-code" class="quiz-result-code"></strong>
       <p id="quiz-result-best" class="quiz-note"></p>
     </div>
     <p class="quiz-note">Hanya skor terbaik profil ini yang masuk leaderboard. Kode peserta tidak membuktikan identitas; jika ada hadiah, petugas perlu memverifikasi peserta secara langsung.</p>
     <p id="quiz-result-status" class="quiz-error-text" role="status"></p>
   </div>
-  <div class="quiz-bottom quiz-bottom-double"><button id="quiz-replay" class="quiz-main-btn" type="button">Main lagi ↻</button><button id="quiz-share" class="quiz-secondary-btn" type="button">Bagikan</button></div>
+  <div class="quiz-bottom quiz-bottom-triple"><button id="quiz-replay" class="quiz-main-btn" type="button">Main Lagi ↻</button><button id="quiz-share" class="quiz-secondary-btn" type="button">Bagikan</button><button id="quiz-finish" class="quiz-secondary-btn quiz-done-btn" type="button">Selesai Bermain →</button></div>
  </section>
  <section id="quiz-error" class="quiz-screen hidden">
   <div class="quiz-scroll quiz-centered"><div class="quiz-big-mark" aria-hidden="true">!</div><h2>Ada kendala</h2><p id="quiz-error-message"></p></div>
   <div class="quiz-bottom"><button id="quiz-retry" class="quiz-main-btn" type="button">Coba lagi →</button></div>
  </section>
 </div>
+
 </body></html>
