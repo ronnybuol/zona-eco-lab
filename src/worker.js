@@ -27,9 +27,16 @@ export async function handleApi(request,env,path){
   if(!field(b?.nickname,2,24)||!REGIONS.includes(b.region)||b.public_consent!==true)return err('Isi nama panggilan, wilayah, dan persetujuan leaderboard.');
   const token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
   const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');
-  const code='ECO-'+Array.from(crypto.getRandomValues(new Uint8Array(5)),b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
   const id=crypto.randomUUID(),nickname=clean(b.nickname);
-  await env.DB.prepare('INSERT INTO quiz_participants(id,token_hash,code,nickname,region) VALUES(?,?,?,?,?)').bind(id,hash,code,nickname,b.region).run();
+  let code='',created=false;
+  for(let attempt=0;attempt<18;attempt++){
+   code='ZU-'+String(1000+(crypto.getRandomValues(new Uint16Array(1))[0]%9000));
+   try{
+    await env.DB.prepare('INSERT INTO quiz_participants(id,token_hash,code,nickname,region) VALUES(?,?,?,?,?)').bind(id,hash,code,nickname,b.region).run();
+    created=true;break;
+   }catch(e){if(!String(e.message).includes('UNIQUE'))throw e;}
+  }
+  if(!created)return err('Kode peserta belum dapat dibuat. Coba lagi.',503);
   return J({ok:true,token,player:{nickname,region:b.region,code}},201);
  }
  if(path==='/api/player/me'&&request.method==='POST'){
@@ -47,8 +54,8 @@ export async function handleApi(request,env,path){
   return J({ok:true,players:players?.n||0,voices:voices?.n||0,topics:topics.results||[],questions:qs.results||[]});
  }
  if(path==='/api/leaderboard'&&request.method==='GET'){
-  const rows=await env.DB.prepare("SELECT nickname,region,score,duration_seconds,created_at FROM (SELECT COALESCE(p.nickname,r.nickname) nickname,COALESCE(p.region,r.region) region,r.score,r.duration_seconds,r.created_at,ROW_NUMBER() OVER (PARTITION BY COALESCE(r.participant_id,'legacy-'||r.session_id) ORDER BY r.score DESC,r.duration_seconds ASC,r.created_at ASC) attempt_rank FROM quiz_results r LEFT JOIN quiz_participants p ON r.participant_id=p.id) ranked WHERE attempt_rank=1 ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 20").all();
-  return J({ok:true,leaders:(rows.results||[]).map((r,i)=>({...r,rank:i+1})),notice:'Leaderboard rekreatif; nama panggilan belum diverifikasi sebagai identitas untuk hadiah.'});
+  const rows=await env.DB.prepare("SELECT COALESCE(p.nickname,r.nickname) nickname,COALESCE(p.region,r.region) region, SUM(r.score)*20 total_points,COUNT(*) rounds,SUM(CASE WHEN r.score=5 THEN 1 ELSE 0 END) perfect_rounds,MAX(r.score)*20 best_points,ROUND(AVG(r.duration_seconds),1) avg_seconds,MIN(r.created_at) first_play FROM quiz_results r LEFT JOIN quiz_participants p ON r.participant_id=p.id GROUP BY COALESCE(r.participant_id,'legacy-'||r.session_id) ORDER BY total_points DESC,perfect_rounds DESC,avg_seconds ASC,first_play ASC LIMIT 20").all();
+  return J({ok:true,leaders:(rows.results||[]).map((r,i)=>({...r,rank:i+1})),notice:'Poin = jumlah jawaban benar x 20 dari semua permainan. Jika poin sama, lebih banyak putaran sempurna diutamakan, lalu rata-rata waktu menjawab paling cepat. Identitas untuk hadiah perlu dicek petugas.'});
  }
  if(path==='/api/quiz/start'&&request.method==='POST'){
   const b=await body(request,6000);
@@ -85,8 +92,8 @@ export async function handleApi(request,env,path){
   await env.DB.prepare('INSERT OR IGNORE INTO quiz_results(session_id,participant_id,nickname,region,score,duration_seconds) VALUES(?,?,?,?,?,?)').bind(sess.id,player.id,player.nickname,player.region,sess.score,duration).run();
   await env.DB.prepare("UPDATE quiz_sessions SET status='done' WHERE id=?").bind(sess.id).run();
   const rec=await env.DB.prepare('SELECT nickname,score,duration_seconds FROM quiz_results WHERE session_id=?').bind(sess.id).first();
-  const best=await env.DB.prepare('SELECT score,duration_seconds FROM quiz_results WHERE participant_id=? ORDER BY score DESC,duration_seconds ASC,created_at ASC LIMIT 1').bind(player.id).first();
-  return J({ok:true,score:rec.score,total:5,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_score:best.score,best_duration_seconds:best.duration_seconds});
+  const best=await env.DB.prepare("SELECT MAX(score)*20 best_points,SUM(score)*20 total_points,COUNT(*) rounds,SUM(CASE WHEN score=5 THEN 1 ELSE 0 END) perfect_rounds FROM quiz_results WHERE participant_id=?").bind(player.id).first();
+  return J({ok:true,score:rec.score,points:rec.score*20,max_points:100,duration_seconds:rec.duration_seconds,nickname:player.nickname,code:player.code,best_points:best.best_points,total_points:best.total_points,rounds:best.rounds,perfect_rounds:best.perfect_rounds});
  }
  if(path==='/api/voice'&&request.method==='POST'){
   const b=await body(request);
@@ -101,7 +108,7 @@ export async function handleApi(request,env,path){
  if(path.startsWith('/api/admin/')){
   if(!auth(request,env))return err('Akses admin ditolak.',401);
   if(path==='/api/admin/participants'&&request.method==='GET'){
-   const rows=await env.DB.prepare("SELECT p.id,p.code,p.nickname,p.region,p.verified,p.verified_at,p.created_at,(SELECT score FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_score,(SELECT duration_seconds FROM quiz_results r WHERE r.participant_id=p.id ORDER BY score DESC,duration_seconds ASC LIMIT 1) best_seconds,(SELECT COUNT(*) FROM quiz_results r WHERE r.participant_id=p.id) plays FROM quiz_participants p ORDER BY best_score DESC,best_seconds ASC,p.created_at ASC LIMIT 500").all();
+   const rows=await env.DB.prepare("SELECT p.id,p.code,p.nickname,p.region,p.verified,p.verified_at,p.created_at,COALESCE(SUM(r.score)*20,0) total_points,COALESCE(MAX(r.score)*20,0) best_points,COUNT(r.id) plays,COALESCE(SUM(CASE WHEN r.score=5 THEN 1 ELSE 0 END),0) perfect_rounds,ROUND(AVG(r.duration_seconds),1) avg_seconds FROM quiz_participants p LEFT JOIN quiz_results r ON r.participant_id=p.id GROUP BY p.id ORDER BY total_points DESC,perfect_rounds DESC,avg_seconds ASC,p.created_at ASC LIMIT 500").all();
    return J({ok:true,participants:rows.results||[]});
   }
   if(path==='/api/admin/participants/rename'&&request.method==='POST'){
