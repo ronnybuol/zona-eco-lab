@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {handleApi} from '../src/worker.js';
+import {handleApi,eventLeaderboard} from '../src/worker.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql'];
+const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql','0007_event_awards.sql'];
 function makeDB({manualQuestion=false}={}){
  const sql=new DatabaseSync(':memory:');
  for(let i=0;i<migrations.length;i++){
@@ -74,10 +74,8 @@ test('Registrasi sekali, dua permainan, satu entri leaderboard dengan nickname t
  }
  const board=await call(env,'/api/leaderboard');
  assert.equal(board.status,200);
- assert.equal(board.data.leaders.length,1);
- assert.equal(board.data.leaders[0].nickname,'Penjaga Lolak');
- assert.equal(board.data.leaders[0].total_points,summed);
- assert.equal(board.data.leaders[0].rounds,2);
+ assert.equal(board.data.phase,'upcoming');
+ assert.equal(board.data.leaders.length,0); // Uji coba di luar jam acara tidak dihitung dalam hadiah.
  assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_results').get().n,2);
  sql.close();
 });
@@ -106,5 +104,54 @@ test('Verifikasi hadiah hanya untuk petugas berotorisasi',async()=>{
  assert.equal(sql.prepare('SELECT nickname FROM quiz_participants WHERE id=?').get(id).nickname,'Peserta Diperbaiki');
  assert.equal((await call(env,'/api/admin/participants/verify',{id,verified:true},secret)).status,200);
  assert.equal(sql.prepare('SELECT verified FROM quiz_participants WHERE id=?').get(id).verified,1);
+ sql.close();
+});
+
+test('Juara empat periode dan juara umum dibekukan, reset periode tidak menghapus akumulasi',async()=>{
+ const {sql,env}=makeDB();
+ const a=await signup(env,'Peserta A'),b=await signup(env,'Peserta B');
+ const players=sql.prepare('SELECT id,nickname FROM quiz_participants WHERE nickname IN (?,?)').all('Peserta A','Peserta B');
+ const ids=Object.fromEntries(players.map(p=>[p.nickname,p.id]));
+ const start=Date.UTC(2026,10,20,0,0,0),period=3*3600000;
+ async function score(token,player,points,finished){
+  const session_id=await round(env,token);
+  const finish=await call(env,'/api/quiz/finish',{session_id,token});
+  assert.equal(finish.status,200);
+  sql.prepare('UPDATE quiz_results SET score=? WHERE session_id=?').run(points/20,session_id);
+  sql.prepare('UPDATE quiz_sessions SET completed_at=? WHERE id=?').run(finished,session_id);
+ }
+ await score(a.data.token,'Peserta A',60,start+1000);
+ await score(b.data.token,'Peserta B',80,start+2000);
+ const p1=await eventLeaderboard(env,start+period+3000);
+ assert.equal(p1.phase,'active');
+ assert.equal(p1.period.number,2);
+ assert.equal(p1.period.leaders.length,0);
+ assert.equal(p1.overall.leaders[0].nickname,'Peserta B');
+ assert.equal(p1.winners.find(w=>w.period===1).nickname,'Peserta B');
+ const saved1=sql.prepare('SELECT nickname,points,status FROM quiz_award_snapshots WHERE period_index=0 AND rank=1').get();
+ assert.equal(saved1.nickname,'Peserta B');assert.equal(saved1.points,80);assert.equal(saved1.status,'pending');
+ await score(a.data.token,'Peserta A',100,start+period+1000);
+ await score(b.data.token,'Peserta B',40,start+period+2000);
+ const p2=await eventLeaderboard(env,start+2*period+3000);
+ assert.equal(p2.period.number,3);
+ assert.equal(p2.overall.leaders[0].nickname,'Peserta A');
+ assert.equal(p2.overall.leaders[0].total_points,160);
+ assert.equal(p2.winners.find(w=>w.period===2).nickname,'Peserta A');
+ assert.equal(sql.prepare('SELECT points FROM quiz_award_snapshots WHERE period_index=0 AND rank=1').get().points,80);
+ const final=await eventLeaderboard(env,start+4*period+3000);
+ assert.equal(final.phase,'closed');
+ assert.equal(final.winners.find(w=>w.period==='umum').nickname,'Peserta A');
+ const key='test-secret-admin-token-32chars-yes';
+ assert.equal((await call(env,'/api/admin/awards')).status,401);
+ const entry=await call(env,'/api/admin/awards',undefined,key);
+ assert.equal(entry.status,200);
+ assert.ok(entry.data.awards.some(x=>x.period_index===0));
+ const pending=await call(env,'/api/admin/awards/status',{period_index:0,rank:1,status:'confirmed'},key);
+ assert.equal(pending.status,409); // belum diperiksa di stan
+ sql.prepare('UPDATE quiz_participants SET verified=1 WHERE id=?').run(ids['Peserta B']);
+ const confirmed=await call(env,'/api/admin/awards/status',{period_index:0,rank:1,status:'confirmed'},key);
+ assert.equal(confirmed.status,200);
+ const checked=await eventLeaderboard(env,start+4*period+6000);
+ assert.equal(checked.winners.find(w=>w.period===1).status,'confirmed');
  sql.close();
 });
