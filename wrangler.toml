@@ -9,5 +9,5 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "zona-eco-lab-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "01084298-c273-4398-9bf3-2ecd69216906"
 migrations_dir = "migrations"
