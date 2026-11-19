@@ -19,12 +19,12 @@ function parseValues(line){
  }
  return values;
 }
-const lines=['migrations/0002_seed_questions.sql','migrations/0003_expand_questions.sql','migrations/0005_curate_bolmong.sql'].flatMap(f=>read(f).split('\n').filter(l=>l.startsWith('INSERT OR IGNORE INTO quiz_questions')));
+const lines=['migrations/0002_seed_questions.sql','migrations/0003_expand_questions.sql','migrations/0005_curate_bolmong.sql','migrations/0010_bank_100_questions.sql'].flatMap(f=>read(f).split('\n').filter(l=>l.startsWith('INSERT OR IGNORE INTO quiz_questions')));
 const data=lines.map(parseValues);
-test('Bank soal unik dan terdiri dari 169 pertanyaan',()=>{
- assert.equal(data.length,169);
- assert.equal(data.filter(q=>q[0]==='bolmong').length,64);
- assert.equal(data.filter(q=>q[0]==='umum').length,105);
+test('Bank soal unik dan terdiri dari 269 pertanyaan',()=>{
+ assert.equal(data.length,269);
+ assert.equal(data.filter(q=>q[0]==='bolmong').length,104);
+ assert.equal(data.filter(q=>q[0]==='umum').length,165);
  assert.equal(new Set(data.map(q=>q[2].trim().toLowerCase())).size,data.length);
 });
 test('Semua pertanyaan punya 4 opsi unik, satu jawaban dan sumber HTTPS',()=>{
@@ -39,7 +39,7 @@ test('Semua pertanyaan punya 4 opsi unik, satu jawaban dan sumber HTTPS',()=>{
  }
 });
 test('Berkas aplikasi, logo resmi dan migrasi tersedia',()=>{
- for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','migrations/0007_event_awards.sql','migrations/0008_voice_contributor_name.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
+ for(const name of ['migrations/0004_participants.sql','migrations/0005_curate_bolmong.sql','migrations/0006_short_codes.sql','migrations/0007_event_awards.sql','migrations/0008_voice_contributor_name.sql','migrations/0009_player_question_history.sql','migrations/0010_bank_100_questions.sql','src/worker.js','public/index.html','public/app.js','public/admin.html','public/admin.js','public/style.css','public/logo-zonautara.png','migrations/0001_init.sql','wrangler.toml'])assert.ok(existsSync(new URL('../'+name,import.meta.url)),name);
 });
 test('Kode JavaScript lolos pemeriksaan sintaks Node.js',()=>{
  for(const file of ['src/worker.js','public/app.js','public/admin.js']){
@@ -168,4 +168,14 @@ test('Pesan jawaban kurang tepat, donasi, dan aturan poin kumulatif sesuai versi
  assert.match(css,/#quiz-feedback\.is-incorrect \.quiz-feedback-title/);
  assert.ok(html.includes('style.css?v=20261118d'));
  assert.ok(html.includes('app.js?v=20261118d'));
+});
+
+test('Pemilihan soal server melacak riwayat per pemain dan meminimalkan pengulangan',()=>{
+ const worker=read('src/worker.js'),schema=read('migrations/0009_player_question_history.sql');
+ assert.match(schema,/PRIMARY KEY\(participant_id, question_id\)/);
+ assert.match(worker,/pickForPlayer\(local,2,history,seen\)/);
+ assert.match(worker,/pickForPlayer\(global,3,history,seen\)/);
+ assert.match(worker,/SELECT question_id,seen_count,last_seen_at FROM quiz_question_exposures/);
+ assert.match(worker,/env\.DB\.batch\(\[saveSession/);
+ assert.match(worker,/ON CONFLICT\(participant_id,question_id\)/);
 });

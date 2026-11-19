@@ -7,7 +7,17 @@ const clean=s=>s.trim().replace(/\s+/g,' ');
 function auth(req,env){const val=req.headers.get('authorization')?.replace(/^Bearer\s+/i,'')||'';const exp=env.ADMIN_TOKEN||'';if(!exp||val.length!==exp.length)return false;let diff=0;for(let i=0;i<val.length;i++)diff|=val.charCodeAt(i)^exp.charCodeAt(i);return diff===0;}
 async function body(req,max=16000){if(!req.headers.get('content-type')?.toLowerCase().includes('application/json'))throw Error('Kirim data berformat JSON.');if(Number(req.headers.get('content-length')||0)>max)throw Error('Data terlalu panjang.');const s=await req.text();if(s.length>max)throw Error('Data terlalu panjang.');try{return JSON.parse(s);}catch{throw Error('Format JSON tidak valid.');}}
 function mix(a){const out=[...a];for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;}
-function pick(pool,count,seen){const fresh=mix(pool.filter(q=>!seen.has(q.id)));const old=mix(pool.filter(q=>seen.has(q.id)));return [...fresh,...old].slice(0,count);}
+/* Prioritaskan soal yang belum pernah ditampilkan kepada profil ini.
+   Setelah bank kategori habis, pilih yang PALING LAMA tidak muncul; klien hanya cadangan. */
+function pickForPlayer(pool,count,history,clientSeen){
+ const fresh=mix(pool.filter(q=>!history.has(q.id)&&!clientSeen.has(q.id)));
+ const clientOnly=mix(pool.filter(q=>!history.has(q.id)&&clientSeen.has(q.id)));
+ const old=mix(pool.filter(q=>history.has(q.id))).sort((a,b)=>{
+  const x=history.get(a.id),y=history.get(b.id);
+  return x.last_seen_at-y.last_seen_at||x.seen_count-y.seen_count;
+ });
+ return [...fresh,...clientOnly,...old].slice(0,count);
+}
 function publicQuestion(q){return {id:q.id,category:q.category,topic:q.topic,question:q.question,options:q.options};}
 async function activeQuestions(env){return (await env.DB.prepare('SELECT id,category,topic,question,options_json,correct_index,explanation,source_url FROM quiz_questions WHERE active=1 ORDER BY id LIMIT 4000').all()).results||[];}
 async function getSession(env,id){if(!field(id,30,100))return null;return await env.DB.prepare('SELECT * FROM quiz_sessions WHERE id=?').bind(id).first();}
@@ -119,12 +129,17 @@ export async function handleApi(request,env,path){
   const player=await playerFromToken(env,b?.token);
   if(!player)return err('Profil pemain tidak ditemukan. Daftarkan ulang dari aplikasi.',401);
   const seen=new Set(Array.isArray(b?.seen)?b.seen.filter(x=>Number.isInteger(x)&&x>0).slice(-400):[]);
+  const historyRows=await env.DB.prepare('SELECT question_id,seen_count,last_seen_at FROM quiz_question_exposures WHERE participant_id=?').bind(player.id).all();
+  const history=new Map((historyRows.results||[]).map(x=>[x.question_id,x]));
   const pool=await activeQuestions(env);const local=pool.filter(x=>x.category==='bolmong'),global=pool.filter(x=>x.category==='umum');
   if(local.length<2||global.length<3)return err('Bank soal belum cukup; jalankan migrasi D1.',503);
-  const selected=mix([...pick(local,2,seen),...pick(global,3,seen)]);
+  const selected=mix([...pickForPlayer(local,2,history,seen),...pickForPlayer(global,3,history,seen)]);
   const questions=selected.map(q=>{const raw=JSON.parse(q.options_json);const o=mix(raw.map((text,idx)=>({text,correct:idx===q.correct_index})));return {id:q.id,category:q.category,topic:q.topic,question:q.question,options:o.map(x=>x.text),answer:o.findIndex(x=>x.correct),explanation:q.explanation,source_url:q.source_url};});
   const id=crypto.randomUUID(),now=Date.now();
-  await env.DB.prepare("INSERT INTO quiz_sessions(id,started_at,questions_json,answers_json,score,status,participant_id) VALUES(?,?,?,'{}',0,'open',?)").bind(id,now,JSON.stringify(questions),player.id).run();
+  const saveSession=env.DB.prepare("INSERT INTO quiz_sessions(id,started_at,questions_json,answers_json,score,status,participant_id) VALUES(?,?,?,'{}',0,'open',?)").bind(id,now,JSON.stringify(questions),player.id);
+  const exposure=env.DB.prepare("INSERT INTO quiz_question_exposures(participant_id,question_id,seen_count,last_seen_at) VALUES(?,?,1,?) ON CONFLICT(participant_id,question_id) DO UPDATE SET seen_count=seen_count+1,last_seen_at=excluded.last_seen_at");
+  // Batch D1 menyimpan sesi dan lima riwayat soal secara atomik.
+  await env.DB.batch([saveSession,...selected.map(q=>exposure.bind(player.id,q.id,now))]);
   return J({ok:true,session_id:id,questions:questions.map(publicQuestion),mix:{bolmong:2,umum:3}});
  }
  if(path==='/api/quiz/answer'&&request.method==='POST'){
