@@ -4,7 +4,7 @@ Microsite **mobile-first** untuk Bolmong Eco Future, Jumat 20 November 2026, Lol
 
 ## Status versi 5.1 — Perbaikan visual dan Suara Bumi (18 November 2026)
 - Aplikasi produksi terhubung ke Cloudflare Workers: https://zona-eco-lab.ronny-buol.workers.dev/. Gunakan `main` untuk versi produksi; branch fitur harus lolos pemeriksaan terlebih dahulu.
-- Setelah migrasi 0005: **169 soal tersimpan**, **141 aktif** (36 Bolmong kontekstual dan 105 umum), sementara 28 trivia detail liputan dinonaktifkan tanpa dihapus.
+- Setelah migrasi 0005: **269 soal tersimpan**, **241 aktif** (76 Bolmong kontekstual dan 165 umum): tambahan 100 soal (40 Bolmong + 60 umum), sementara 28 trivia detail liputan tetap dinonaktifkan tanpa dihapus.
 - Setiap putaran: 2 Bolmong + 3 umum. Server mengacak soal **dan urutan opsi**. HP mengingat soal yang sudah pernah muncul; pengulangan baru terjadi ketika soal baru dari kategori itu habis atau riwayat browser hilang.
 - Seluruh pengalaman **satu tahap satu layar penuh**: perkenalan → Tantangan Bumi → leaderboard → Suara Bumi → Dukung Zonautara → Data Punya Cerita. Saat kuis dimulai, profil sekali → soal → pembahasan → hasil. Scroll hanya pada area isi jika HP pendek; navigasi dan CTA utama tetap di bawah.
 - Profil nama panggilan dan wilayah didaftarkan sekali per browser/HP tanpa nomor telepon. Token acak hanya disimpan di perangkat, hash token di D1; kode peserta ditampilkan di hasil. Main ulang otomatis mempertahankan nama.
@@ -25,6 +25,8 @@ migrations/0005_curate_bolmong.sql  28 trivia nonaktif dan 30 soal situasional
 migrations/0006_short_codes.sql  kode peserta singkat untuk profil lama
 migrations/0007_event_awards.sql  jendela hadiah, kandidat dan status verifikasi
 migrations/0008_voice_contributor_name.sql  nama atau sapaan pengirim Suara Bumi
+migrations/0009_player_question_history.sql  riwayat soal per peserta, tersimpan di D1
+migrations/0010_bank_100_questions.sql  tambah 40 soal Bolmong dan 60 umum
 wrangler.toml          Bindings produksi D1
 ```
 **R2 belum dipakai pada versi ringan ini**. Logo/CSS/JS disajikan dari Workers Static Assets (langsung dari repo). Tambah binding R2 hanya ketika ada penyimpanan foto atau berkas yang memang memerlukan R2. Jangan menaruh kontak warga dalam bucket publik.
@@ -50,7 +52,7 @@ Database produksi sudah ada dan ID-nya telah tercatat dalam konfigurasi. Jangan 
 ```bash
 npx wrangler d1 migrations apply DB --remote
 ```
-Skrip 0002 dan 0003 mengisi 139 soal; 0004 menambah profil tanpa menghapus skor lama; 0005 mengkurasi trivia dan menambah soal kontekstual; 0006 menyingkat kode peserta lama tanpa menghapus token atau hasil; 0007 menambah snapshot kandidat hadiah; 0008 menambah kolom nama/sapaan pengirim Suara Bumi tanpa mengubah laporan lama. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
+Skrip 0002 dan 0003 mengisi 139 soal; 0004 menambah profil tanpa menghapus skor lama; 0005 mengkurasi trivia dan menambah soal kontekstual; 0006 menyingkat kode peserta lama tanpa menghapus token atau hasil; 0007 menambah snapshot kandidat hadiah; 0008 menambah kolom nama/sapaan pengirim Suara Bumi tanpa mengubah laporan lama; 0009 mencatat soal yang pernah ditampilkan per peserta; 0010 menambah 100 soal baru. Migrations aman dijalankan ulang karena versi terlacak, tetapi **jangan mengedit file migrasi yang sudah diterapkan** pada database produksi; buat migrasi baru. Setelah mengedit soal lewat admin, perubahan berada di D1, bukan otomatis berubah di file seed repo.
 
 **D. Deploy pertama**:
 ```bash
@@ -143,3 +145,12 @@ Jangan unggah token API, password, atau identitas warga ke repo publik. Cerita w
 ## Visual
 - Enam ilustrasi orisinal tanpa teks/logo Zonautara palsu **ditanam sebagai inline SVG di public/index.html** untuk menghindari hambatan pemuatan gambar dari subpath, lazy-loading pada layar tersembunyi, dan menyusutnya elemen flex. Berkas sumber ilustrasi terpisah tetap tersimpan di public/art/: intro.svg, challenge.svg, leaderboard.svg, suara.svg, dukung.svg, jelajah.svg.
 - Logo resmi Zonautara hanya terlihat di layar pertama, diambil dari public/logo-zonautara.png, tidak digenerate ulang. Layar berikutnya menggunakan tulisan teks biasa ZONA ECO LAB. Ilustrasi tetap lokal tanpa CDN.
+
+## Ketahanan bank soal untuk peserta berulang (19 November 2026)
+- Kuis memilih tetap **2 soal Bolmong + 3 soal umum** per putaran, dengan pilihan jawaban diacak server.
+- Profil pemain memiliki riwayat soal di tabel `quiz_question_exposures`. **Soal dicatat sejak ditampilkan** (pada start sesi), bukan saat jawaban selesai; meninggalkan sesi tidak menghapus catatannya.
+- Saat mengambil soal baru, server mengutamakan yang belum pernah tampil kepada profil yang sama, lalu mempertimbangkan daftar `seen` dari browser sebagai cadangan. Setelah kategori habis, sistem memakai ulang soal yang paling lama tidak muncul.
+- Dengan 76 soal aktif Bolmong, tiap profil mendapat **38 putaran berisi 2 soal lokal tanpa pengulangan**; terdapat 165 soal umum untuk 55 putaran (3/putaran) tanpa pengulangan.
+- Riwayat berlaku per **profil/token**. Peserta yang sengaja membuat profil baru dengan browser lain tetap bisa mendapatkan soal yang pernah mereka lihat dari profil terdahulu; kode tanpa login tidak cukup untuk mencegah itu.
+- Migrasi bersifat additive, tidak menghapus sesi, skor, atau riwayat hadiah. Periksa endpoint `/api/stats`: `bolmong=76` dan `umum=165` setelah deployment.
+- Wajib uji satu pemain dua putaran dan dashboard admin setelah migrasi sebelum awal perlombaan.
