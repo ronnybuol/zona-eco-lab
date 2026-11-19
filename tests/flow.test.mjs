@@ -5,7 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {handleApi,eventLeaderboard} from '../src/worker.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql','0007_event_awards.sql','0008_voice_contributor_name.sql'];
+const migrations=['0001_init.sql','0002_seed_questions.sql','0003_expand_questions.sql','0004_participants.sql','0005_curate_bolmong.sql','0006_short_codes.sql','0007_event_awards.sql','0008_voice_contributor_name.sql','0009_player_question_history.sql','0010_bank_100_questions.sql'];
 function makeDB({manualQuestion=false}={}){
  const sql=new DatabaseSync(':memory:');
  for(let i=0;i<migrations.length;i++){
@@ -47,12 +47,12 @@ async function round(env,token){
  }
  return start.data.session_id;
 }
-test('Seluruh migrasi berjalan dan 141 soal aktif tanpa menghapus tambahan admin',()=>{
+test('Seluruh migrasi berjalan dan 241 soal aktif tanpa menghapus tambahan admin',()=>{
  const {sql}=makeDB({manualQuestion:true});
- assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_questions').get().n,170);
+ assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_questions').get().n,270);
  assert.match(sql.prepare("SELECT code FROM quiz_participants WHERE id='legacy-uuid'").get().code,/^ZU-[0-9]{4}$/);
- assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_questions WHERE active=1').get().n,142);
- assert.equal(sql.prepare("SELECT COUNT(*) n FROM quiz_questions WHERE category='bolmong' AND active=1").get().n,37);
+ assert.equal(sql.prepare('SELECT COUNT(*) n FROM quiz_questions WHERE active=1').get().n,242);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM quiz_questions WHERE category='bolmong' AND active=1").get().n,77);
  assert.equal(sql.prepare("SELECT active FROM quiz_questions WHERE question='Tanggal apa tercantum sebagai pembangunan pada dinding Bendung Lolak Atas menurut liputan?'").get().active,0);
  assert.equal(sql.prepare("SELECT active FROM quiz_questions WHERE question LIKE 'Jika melihat sampah di sekitar sungai%'").get().active,1);
  sql.close();
@@ -180,5 +180,53 @@ test('Suara Bumi menyimpan nama atau sapaan dengan aman dan mempertahankan lapor
  const body=await csv.text();
  assert.ok(body.includes('contributor_name'));
  assert.ok(body.includes('Rina Bolmong'));
+ sql.close();
+});
+
+test('Riwayat D1 mencegah pengulangan 38 putaran meski klien tidak mengirim seen',async()=>{
+ const {sql,env}=makeDB();
+ const person=await signup(env,'Sahabat Bumi');assert.equal(person.status,201);
+ const all=new Set(),local=new Set(),general=new Set();
+ for(let roundNum=0;roundNum<38;roundNum++){
+  const started=await call(env,'/api/quiz/start',{token:person.data.token,seen:[]});
+  assert.equal(started.status,200);
+  assert.equal(started.data.questions.length,5);
+  const ids=started.data.questions.map(q=>q.id);
+  assert.equal(new Set(ids).size,5);
+  for(const question of started.data.questions){
+   assert.equal(all.has(question.id),false,'soal muncul ulang pada putaran '+(roundNum+1)+': '+question.id);
+   all.add(question.id);
+   (question.category==='bolmong'?local:general).add(question.id);
+  }
+ }
+ assert.equal(local.size,76);
+ assert.equal(general.size,114);
+ assert.equal(all.size,190);
+ const participantId=sql.prepare("SELECT id FROM quiz_participants WHERE nickname='Sahabat Bumi'").get().id;
+ const served=sql.prepare('SELECT COUNT(*) n FROM quiz_question_exposures WHERE participant_id=?').get(participantId).n;
+ assert.equal(served,190);
+ const next=await call(env,'/api/quiz/start',{token:person.data.token,seen:[]});
+ assert.equal(next.status,200);
+ assert.equal(next.data.questions.filter(q=>q.category==='bolmong'&&local.has(q.id)).length,2);
+ assert.equal(next.data.questions.filter(q=>q.category==='umum'&&general.has(q.id)).length,0);
+ const repeats=sql.prepare('SELECT SUM(seen_count) n FROM quiz_question_exposures WHERE participant_id=?').get(participantId).n;
+ assert.equal(repeats,195);
+ sql.close();
+});
+
+test('Soal tambahan lengkap, empat opsi unik, pembahasan dan sumber HTTPS',()=>{
+ const {sql}=makeDB();
+ const rows=sql.prepare('SELECT category,topic,question,options_json,correct_index,explanation,source_url FROM quiz_questions WHERE id>(SELECT MAX(id)-100 FROM quiz_questions) ORDER BY id').all();
+ assert.equal(rows.length,100);
+ for(const q of rows){
+  const opts=JSON.parse(q.options_json);
+  assert.equal(opts.length,4,q.question);
+  assert.equal(new Set(opts.map(x=>x.trim().toLowerCase())).size,4,q.question);
+  assert.ok(q.correct_index>=0&&q.correct_index<4,q.question);
+  assert.ok(q.explanation.length>=15&&q.explanation.length<=500,q.question);
+  assert.match(q.source_url,/^https:\/\//,q.question);
+ }
+ assert.equal(rows.filter(x=>x.category==='bolmong').length,40);
+ assert.equal(rows.filter(x=>x.category==='umum').length,60);
  sql.close();
 });
